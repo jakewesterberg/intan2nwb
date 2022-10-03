@@ -1,26 +1,55 @@
-function intan2nwb(ID, varargin)
-%% Header info
-% Jake Westerberg (westerberg-science)
+%% Header
+% Jake Westerberg, PhD (westerberg-science)
 % Vanderbilt University
 % jakewesterberg@gmail.com
-% Code contributions from Patrick Meng
+% Code contributions from Patrick Meng (VU)
 
+% Description
+% Written as a pipeline for data collected in the Bastos Lab (or similar
+% setup using the intan system) to be transformed from raw to the nwb
+% format.
+
+% Requirements
+% Certain aspects of the data processing require toolboxes found in other
+% github repos. Original or forked versions of all required can be found on
+% Jake's github page (westerberg-science). Kilosort (3 is used here) is
+% required for spike sorting, potential-toolbox is required for most low
+% frequency computations, extended-GLM-for-synapse-detection (a modified
+% version found on Jake's github) is required to estimate connectivity
+% between units. Also, this of course requires the matnwb toolbox.
+
+% Notes
+% 1. This version of the code requires having a google sheet with some
+% information pertaining to the recordings. 
+
+
+function intan2nwb(ID, varargin)
 %% Defaults
+gpu_compute                     = true; % use gpu processing where possible
+parallel_compute                = true; % use parallel computing where possible
+
 skip_completed                  = true;
 
-in_file_path                    = '\\teba.psy.vanderbilt.edu\bastoslab\_RAW_DATA\';
-out_file_path                   = '\\teba.psy.vanderbilt.edu\bastoslab\_NWB_DATA\';
+in_file_path                    = '\\teba.psy.vanderbilt.edu\bastoslab\_BL_DATA_PIPELINE\_RAW_DATA\';
+out_file_path                   = '\\teba.psy.vanderbilt.edu\bastoslab\_BL_DATA_PIPELINE\_NWB_DATA\';
 
-this_subject                    = [];
-this_session                    = [];
+this_subject                    = []; % used to specify processing for only certain subjects
+this_ident                      = []; % used to specify specific session(s) with their ident
 
-params.binary_output            = true;
-params.kilosort                 = true;
-params.estimate_connectivity    = true;
-params.muae                     = true;
+params.save_binary_output       = true;
+params.spk                      = true; % requires Kilosort (v3) on path currently only option
+params.cnx                      = true; % requires extended-GLM-for-synapse-detection on path
+params.muae                     = true; % requires potential-toolbox on path
 params.lfp                      = true;
-params.csd                      = true;
-params.nflfp                    = true;
+params.csd                      = true; % requires potential-toolbox on path
+params.nflfp                    = true; % requires potential-toolbox on path
+params.eye                      = true;
+
+reprocess.spk                   = true;
+reprocess.
+reprocess.lfp                   = true;
+
+params.trigger_PRO              = false; % not useable now.
 
 %% Varargin
 varStrInd = find(cellfun(@ischar,varargin));
@@ -30,18 +59,18 @@ for iv = 1:length(varStrInd)
             out_file_path = varargin{varStrInd(iv)+1};
         case {'-o', 'out_file_path'}
             out_file_path = varargin{varStrInd(iv)+1};
-        case {'-a', 'subj'}
-            subj = varargin{varStrInd(iv)+1};
-        case {'-s', 'ses'}
-            ses = varargin{varStrInd(iv)+1};
         case {'skip'}
             skip_completed = varargin{varStrInd(iv)+1};
         case {'this_subject'}
             this_subject = varargin{varStrInd(iv)+1};      
-        case {'this_session'}
-            this_session = varargin{varStrInd(iv)+1};
+        case {'this_ident'}
+            this_ident = varargin{varStrInd(iv)+1};
         case {'-p', 'params'}
-            params = varargin{varStrInd(iv)+1};   
+            params = varargin{varStrInd(iv)+1};
+        case {'-pc', 'parallel_compute'}
+            parallel_compute = varargin{varStrInd(iv)+1};
+        case {'-gpu', 'gpu_compute'}
+            gpu_compute = varargin{varStrInd(iv)+1};          
     end
 end
 
@@ -59,9 +88,11 @@ if ~isempty(this_subject)
 end
 
 % Limit to a specific session in a specific subject
-if ~isempty(this_session)
-    to_proc = find(find(strcmp(recording_info.Subject, this_subject)) & ...
-        find(strcmp(recording_info.Session, this_session)));
+if ~isempty(this_ident)
+    to_proc = nan(1, numel(this_ident));
+    for ii = 1 : numel(this_ident)
+        to_proc(ii) = find(strcmp(recording_info.Identifier, this_ident{ii}));
+    end
 end
 
 %% Loop through sessions
@@ -88,6 +119,7 @@ for ii = to_proc
     % Record spiking data
     if params.kilosort
 
+
     end
 
     % Estimate interconnectivity of single units
@@ -100,13 +132,29 @@ for ii = to_proc
 
     end
 
-    % Record LFP data
+    % Record LFP
     if params.lfp
+
+    end
+
+    % Compute CSD
+    if params.csd
+
+    end
+
+    % Compute nfLFP
+    if params.nflfp
+
+    end
+
+    % Record eye trace
+    if params.eye_tracking
 
     end
 
     % Save to NWB
     nwbExport(nwb, [out_file_path 'sub-' recording_info.Subject '_ses-' recording_info.Session '.nwb']);
+    disp(['SUCCESSFULLY SAVED: ' out_file_path 'sub-' recording_info.Subject '_ses-' recording_info.Session '.nwb'])
 
     % Increment counter
     n_procd = n_procd + 1;
