@@ -1,4 +1,4 @@
-function dir_cont = find_in_dir(dir_in,search_exp,omit_terms)
+function dir_cont = findFiles(dir_in,search_exp,omit_terms)
 
 dir_str = dir(dir_in);
 dir_cont = {};
@@ -14,7 +14,7 @@ for itt_str = 1 : length(dir_str)
             ~strcmp(dir_str(itt_str).name,'..')
         
         file_name = fullfile(dir_in,dir_str(itt_str).name);
-        temp_dir_cont = find_in_dir(file_name,search_exp);
+        temp_dir_cont = findFiles(file_name,search_exp);
         
         if ~isempty(temp_dir_cont)
             
