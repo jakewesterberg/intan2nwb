@@ -262,6 +262,9 @@ for ii = to_proc
         pvar_amp_ch = cat(1,{intan_header.amplifier_channels.native_channel_name});
         pvar_ds_factor = params.downsample_factor;
 
+        if ~isempty(gcp('nocreate'))
+            delete(gcp);
+        end
         pool1 = parpool(workers);
         parfor kk = 1:n_channels
             % Open file and init data
@@ -421,7 +424,7 @@ for ii = to_proc
     %         end
 
     % Save to NWB
-    nwbExport(nwb, [out_file_path_itt 'sub-' recording_info.Subject '_ses-' recording_info.Session '.nwb']);
+    nwbExport(nwb, [out_file_path 'sub-' recording_info.Subject{ii} '_ses-' datestr(recording_info.Session(ii), 'yymmdd') '.nwb']);
     disp(['SUCCESSFULLY SAVED: ' out_file_path_itt 'sub-' recording_info.Subject '_ses-' recording_info.Session '.nwb'])
 
     % Increment counter
