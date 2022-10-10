@@ -26,16 +26,18 @@ function intan2nwb(varargin)
 %% Defaults
 workers                         = 0; % use parallel computing where possible
 
-skip_completed                  = true;
+skip_completed                  = false;
+save_nwb                        = false;
+reprocess_bin                   = false;
 
-in_file_path                    = '\\teba.psy.vanderbilt.edu\bastoslab\_BL_DATA_PIPELINE\_0_RAW_DATA\';
-out_file_path                   = '\\teba.psy.vanderbilt.edu\bastoslab\_BL_DATA_PIPELINE\_3_NWB_DATA\';
+in_file_path                    = '\\pit\ephys\_DATA\_BL_DATA_PIPELINE\_0_RAW_DATA\';
+out_file_path                   = '\\pit\ephys\_DATA\_BL_DATA_PIPELINE\_3_NWB_DATA\';
 
 this_subject                    = []; % used to specify processing for only certain subjects
 this_ident                      = []; % used to specify specific session(s) with their ident
 
-bin_file_path                    = '\\teba.psy.vanderbilt.edu\bastoslab\_BL_DATA_PIPELINE\_1_BIN_DATA\';
-spk_file_path                    = '\\teba.psy.vanderbilt.edu\bastoslab\_BL_DATA_PIPELINE\_2_SPK_DATA\';
+bin_file_path                    = '\\pit\ephys\_DATA\_BL_DATA_PIPELINE\_1_BIN_DATA\';
+spk_file_path                    = '\\pit\ephys\_DATA\_BL_DATA_PIPELINE\_2_SPK_DATA\';
 
 quick_storage_path               = [userpath filesep 'kilosort_scratch'];
 
@@ -43,6 +45,9 @@ params.downsample_fs            = 1000;
 
 params.car_bin                  = false;
 params.trigger_PRO              = false; % not useable now.
+
+%% in case of missing data...
+default_adc_mapping = {'eye_x', 'eye_y', 'eye_pupil'};
 
 %% Varargin
 varStrInd = find(cellfun(@ischar,varargin));
@@ -99,6 +104,7 @@ if ~isempty(this_ident)
     end
 end
 
+n_procd = 0;
 %% Loop through sessions
 for ii = to_proc
 
@@ -229,16 +235,6 @@ for ii = to_proc
         [muae_power_bwb, muae_power_bwa] = butter(4, 250/(intan_header.sampling_rate/2), 'low');
         [lfp_bwb, lfp_bwa] = butter(2, [1 250]/(intan_header.sampling_rate/2), 'bandpass');
 
-
-        % Determine number of channels that should be present for probe
-        if strcmp(class(recording_info.Probe_Channels), 'double')
-            n_channels = recording_info.Probe_Channels(jj);
-        elseif strcmp(class(recording_info.Probe_Channels), 'cell')
-            temp_array_1 = strtrim(split(recording_info.Probe_Channels{ii}, ','));
-            n_channels = str2double(temp_array_1{jj});
-            clear temp_array_1
-        end
-
         % Load the correct channel map file
         load([probes{jj} '.mat'], 'channel_map', 'x', 'y', 'z')
 
@@ -323,12 +319,14 @@ for ii = to_proc
 
         reset(gpuDevice)
 
-        % Create Spiking bin file
         if ~exist([bin_file_path file_ident filesep], 'dir')
             mkdir([bin_file_path file_ident filesep])
         end
-        intan2bin(in_file_path_itt, [bin_file_path file_ident filesep], [file_ident '_probe-' num2str(jj-1) '.bin'], ...
-            intan_header, paren(recording_info.Probe_Port{ii}, jj))
+        % Create Spiking bin file
+        if ~exist([bin_file_path file_ident filesep file_ident '_probe-' num2str(jj-1) '.bin'], 'file') | reprocess_bin
+            intan2bin(in_file_path_itt, [bin_file_path file_ident filesep], [file_ident '_probe-' num2str(jj-1) '.bin'], ...
+                intan_header, paren(recording_info.Probe_Port{ii}, jj))
+        end
 
         if params.car_bin; applyCAR2Dat([bin_file_path file_ident filesep file_ident '_probe-' num2str(jj-1) '.bin'], n_channels); end
 
@@ -411,21 +409,130 @@ for ii = to_proc
 
         reset(gpuDevice)
 
+        spike_times = [];
+        spike_times_index = [];
+        unit_idents = unique(rez.st3(:,2))';
+        for kk = unit_idents
+            spike_times = [spike_times; rez.st3(rez.st3(:,2)==kk,1)./intan_header.sampling_rate];
+            spike_times_index = [spike_times_index; sum(rez.st3(:,2)==kk)];
+        end
+
+        nwb.units = types.core.Units( ...
+            'colnames', {'spike_times'}, ...
+            'id', types.hdmf_common.ElementIdentifiers( ...
+            'data', int64(0:numel(spikes_times_index) - 1) ...
+            ), ...
+            'spike_times', spike_times, ...
+            'spike_times_index', spike_times_index ...
+            );
+
     end
 
-    %         % Estimate interconnectivity of single units
-    %         if params.cnx
-    %
-    %         end
-    %
-    %         % Record eye trace
-    %         if params.eye
-    %
-    %         end
+    % Record adc traces
+    if strcmp(intan_header.board_adc_channels(1).custom_channel_name, "ANALOG-IN-1")
+        adc_map = convertCharsToStrings(default_adc_mapping);
+        adc_map = adc_map(1:size(intan_header.board_adc_data,1));
+    else
+        for jj = 1 : numel(intan_header.board_adc_channels)
+            adc_map(jj) = convertCharsToStrings(intan_header.board_adc_channels(jj).custom_channel_name);
+        end
+    end
+    for jj = 1 : numel(adc_map)
+
+        temp_dat(1,:) = downsample(intan_header.board_adc_data(jj, :), params.downsample_factor);
+
+        if strcmp(lower(adc_map), 'eye_x')
+
+            find_y = find(ismember(lower(adc_map), "eye_y"));
+            temp_dat(2,:) = downsample(intan_header.board_adc_data(find_y, :), params.downsample_factor);
+
+            find_p = find(ismember(lower(adc_map), "eye_pupil"));
+            temp_pdat(1,:) = downsample(intan_header.board_adc_data(find_p, :), params.downsample_factor);
+
+            eye_position = types.core.SpatialSeries( ...
+                'description', 'The position of the eye. Actual sampling rate = 500 Hz (Reported=1kHz)', ...
+                'data', temp_dat, ...
+                'starting_time_rate', params.downsample_fs, ... % Hz
+                'timestamps', time_stamps_s_ds, ...
+                'timestamps_unit', 'seconds' ...
+                );
+
+            eye_tracking = types.core.EyeTracking();
+            eye_tracking.spatialseries.set('eye_tracking', eye_position);
+
+            pupil_diameter = types.core.TimeSeries( ...
+                'description', 'Pupil diameter.', ...
+                'data', temp_pdat, ...
+                'starting_time_rate', params.downsample_fs, ... % Hz
+                'data_unit', 'arbitrary units', ...
+                'timestamps', time_stamps_s_ds, ...
+                'timestamps_unit', 'seconds' ...
+                );
+
+            pupil_tracking = types.core.PupilTracking();
+            pupil_tracking.timeseries.set('pupil_diameter', pupil_diameter);
+
+            % behavior_processing_module = types.core.ProcessingModule("stores behavioral data.");
+            behavior_processing_module.nwbdatainterface.set('EyeTracking', eye_tracking);
+
+            % behavior_processing_module = types.core.ProcessingModule("stores behavioral data.");
+            behavior_processing_module.nwbdatainterface.set('PupilTracking', pupil_tracking);
+
+            clear temp_* find_*
+        end
+    end
+
+    % Digital event codes
+    digital_data = intan_header.board_dig_in_data(end-7:end,:);
+    intan_code_times_unprocessed = find(sum(digital_data) > 0);
+    intan_code_times = nan(length(intan_code_times_unprocessed),1);
+    intan_code_values = nan(8,length(intan_code_times_unprocessed));
+
+    temp_ctr = 1;
+    intan_code_times(temp_ctr) = intan_code_times_unprocessed(temp_ctr);
+    intan_code_values(:,temp_ctr) = digital_data(:,intan_code_times(temp_ctr));
+    previous_value = intan_code_times(temp_ctr);
+    temp_ctr = temp_ctr + 1;
+    for ii = 2:length(intan_code_times_unprocessed)
+        if(intan_code_times_unprocessed(ii) == previous_value + 1)
+            %Do nothing
+        else
+            intan_code_times(temp_ctr) = intan_code_times_unprocessed(ii);
+            intan_code_values(:,temp_ctr) = digital_data(:,intan_code_times(temp_ctr)+1);
+            temp_ctr = temp_ctr + 1;
+        end
+        previous_value = intan_code_times_unprocessed(ii);
+    end
+
+    intan_code_times = intan_code_times(1:temp_ctr-1) ./ intan_header.sampling_rate;
+    intan_code_values = intan_code_values(:,1:temp_ctr-1);
+    intan_code_values = bit2int(flip(intan_code_values),8)';
+
+    % Dientangle event codes...
+    event_data = identEvents(intan_code_values, intan_code_times);
+
+    for jj = 1 : numel(event_data)
+        trials = types.core.TimeIntervals( ...
+            'colnames', {'start_time', 'stop_time'}, ...
+            'start_time', types.hdmf_common.VectorData( ...
+            'data', event_data{jj}.start_times, ...
+       	    'description','start time of trial in seconds' ...
+            ), ...
+            'stop_time', types.hdmf_common.VectorData( ...
+            'data', event_data{jj}.stop_times, ...
+       	    'description','end of each trial in seconds' ...
+            ), ...
+            'id', types.hdmf_common.ElementIdentifiers('data', ...
+            0:numel(event_data{jj}.start_times)-1) ...
+            );
+        nwb.intervals.set(event_data{jj}.task, trials); clear trials
+    end
 
     % Save to NWB
-    nwbExport(nwb, [out_file_path 'sub-' recording_info.Subject{ii} '_ses-' datestr(recording_info.Session(ii), 'yymmdd') '.nwb']);
-    disp(['SUCCESSFULLY SAVED: ' out_file_path_itt 'sub-' recording_info.Subject '_ses-' recording_info.Session '.nwb'])
+    if save_nwb
+        nwbExport(nwb, [out_file_path 'sub-' recording_info.Subject{ii} '_ses-' datestr(recording_info.Session(ii), 'yymmdd') '.nwb']);
+        disp(['SUCCESSFULLY SAVED: ' out_file_path 'sub-' recording_info.Subject{ii} '_ses-' datestr(recording_info.Session(ii), 'yymmdd') '.nwb'])
+    end
 
     % Increment counter
     n_procd = n_procd + 1;

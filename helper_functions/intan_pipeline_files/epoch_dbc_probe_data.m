@@ -131,8 +131,6 @@ for ii = 1:num_trials
     eye_data_time_stamps(ii,1:length(current_times)) = current_times;
 end
 
-
-
 correct_trials = ml_data.TrialError == 0;
 
 %Local Or Globall oddball

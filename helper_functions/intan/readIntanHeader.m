@@ -321,29 +321,75 @@ end
 %TODO There may or may not be temperature sensors, but if there are,
 %they should go here
 
+%% Code written by Patrick to get "one file per channel" data into arrays
+
+%Store all the auxillary input data
+%This is sampled at 1/4th the speed of amplifier channels
+%The vector is the same length, just there's multiple copies of the
+%same number
+%For example, if amplifier is [1 2 3 1 2 3 2 4]
+%This one would be            [6 6 6 6 7 7 7 7]
+
+%Board ADC
+%Same rate as the amplifier data
+board_adc_data = zeros(num_board_adc_channels,num_samples_total,'single');
+for iadc = 1:num_board_adc_channels
+    current_fid = fopen(folder_path + "\board-" + board_adc_channels(iadc).native_channel_name + ".dat");
+    if (board_mode == 0)
+        board_adc_data(iadc,:) = fread(current_fid,num_samples_total,'uint16') * 0.000050354;
+    else
+        board_adc_data(iadc,:) = (fread(current_fid,num_samples_total,'uint16')-32768) * 0.0003125;
+    end
+    fclose(current_fid);
+end
+
+%Board digital input data
+%Same rate as the amplifier
+board_dig_in_data = zeros(num_board_dig_in_channels,num_samples_total,'logical');
+for idin = 1:num_board_dig_in_channels
+    current_fid = fopen(folder_path + "\board-" + board_dig_in_channels(idin).native_channel_name + ".dat");
+    board_dig_in_data(idin,:) = fread(current_fid,num_samples_total,'uint16');
+    fclose(current_fid);
+end
+
+%Board digital output data
+%Same rate as the amplifier
+board_dig_out_data = zeros(num_board_dig_out_channels,num_samples_total,'logical');
+for ido = 1:num_board_dig_out_channels
+    current_fid = fopen(folder_path + "\board-" + board_dig_out_channels(ido).native_channel_name + ".dat");
+    board_dig_out_data(ido,:) = fread(current_fid,num_samples_total,'uint16');
+    fclose(current_fid);
+end
+
+%TODO FIGURE OUT SPIKE TRIGGERS
+
+%TODO There may or may not be temperature sensors, but if there are,
+%they should go here
+
+%Create a structure to output all the variables here
+
+if (data_file_main_version_number > 1)
+    probe_data.reference_channel = reference_channel;
+end
+
+probe_data.board_adc_channels = board_adc_channels;
+probe_data.board_adc_data = board_adc_data;
+
+probe_data.board_dig_in_channels = board_dig_in_channels;
+probe_data.board_dig_in_data = board_dig_in_data;
+
+probe_data.board_dig_out_channels = board_dig_out_channels;
+probe_data.board_dig_out_data = board_dig_out_data;
+
 %Create a structure to output all the variables here
 probe_data.sampling_rate = sample_rate;
 probe_data.num_samples = num_samples_total;
 probe_data.notes = notes;
 probe_data.frequency_parameters = frequency_parameters;
 
-if (data_file_main_version_number > 1)
-    probe_data.reference_channel = reference_channel;
-end
-
 probe_data.amplifier_channels = amplifier_channels;
 
 probe_data.spike_triggers = spike_triggers;
-
-probe_data.aux_input_channels = aux_input_channels;
-
-probe_data.supply_voltage_channels = supply_voltage_channels;
-
-probe_data.board_adc_channels = board_adc_channels;
-
-probe_data.board_dig_in_channels = board_dig_in_channels;
-
-probe_data.board_dig_out_channels = board_dig_out_channels;
 
 probe_data.time_stamp = time_stamp;
 
