@@ -32,14 +32,14 @@ reprocess_bin                   = false;
 
 toolbox_path                    = 'C:\Users\westerja\Documents\GitHub\intan2nwb\';
 
-in_file_path                    = '\\pit\ephys\_DATA\_BL_DATA_PIPELINE\_0_RAW_DATA\';
-out_file_path                   = '\\pit\ephys\_DATA\_BL_DATA_PIPELINE\_5_NWB_DATA\';
+in_file_path                    = 'Z:\_DATA\_BL_DATA_PIPELINE\_0_RAW_DATA\';
+out_file_path                   = 'Z:\_DATA\_BL_DATA_PIPELINE\_5_NWB_DATA\';
 
 this_subject                    = []; % used to specify processing for only certain subjects
 this_ident                      = []; % used to specify specific session(s) with their ident
 
-bin_file_path                    = '\\pit\ephys\_DATA\_BL_DATA_PIPELINE\_1_BIN_DATA\';
-spk_file_path                    = '\\pit\ephys\_DATA\_BL_DATA_PIPELINE\_2_SPK_DATA\';
+bin_file_path                    = 'Z:\_DATA\_BL_DATA_PIPELINE\_1_BIN_DATA\';
+spk_file_path                    = 'Z:\_DATA\_BL_DATA_PIPELINE\_2_SPK_DATA\';
 
 quick_storage_path               = [userpath filesep 'kilosort_scratch'];
 
@@ -415,23 +415,30 @@ for ii = to_proc
         % create json
         json_struct = struct();
 
-        json_struct.directories.kilosort_output_directory = spk_file_path_itt;
+        json_struct.directories.kilosort_output_directory = ...
+            strrep(spk_file_path_itt, filesep, [filesep filesep]);
 
-        json_struct.waveform_metrics_file = [spk_file_path_itt 'waveform_metrics.csv'];
+        json_struct.waveform_metrics.waveform_metrics_file = ...
+            strrep([spk_file_path_itt 'waveform_metrics.csv'], filesep, [filesep filesep]);
 
         json_struct.ephys_params.sample_rate = intan_header.sampling_rate;
         json_struct.ephys_params.bit_volts = 0.195;
         json_struct.ephys_params.num_channels = n_channels;
         json_struct.ephys_params.reference_channels = n_channels/2;
         json_struct.ephys_params.vertical_site_spacing = mean(diff(temp_Z));
-        json_struct.ephys_params.ap_band_file = [bin_file_path file_ident filesep file_ident '_probe-' num2str(jj-1) '.bin'];
+        json_struct.ephys_params.ap_band_file = ...
+            strrep([bin_file_path file_ident filesep file_ident '_probe-' num2str(jj-1) '.bin'], filesep, [filesep filesep]);
         json_struct.ephys_params.cluster_group_file_name = 'cluster_group.tsv.v2';
+        json_struct.ephys_params.reorder_lfp_channels = true;
+        json_struct.ephys_params.lfp_sample_rate = params.downsample_fs;
+        json_struct.ephys_params.probe_type = probes{jj};
 
         json_struct.ks_postprocessing_params.within_unit_overlap_window = 0.000166;
         json_struct.ks_postprocessing_params.between_unit_overlap_window = 0.000166;
         json_struct.ks_postprocessing_params.between_unit_overlap_distance = 5;
 
-        json_struct.mean_waveform_params.mean_waveforms_file = [spk_file_path_itt 'mean_waveforms.npy'];
+        json_struct.mean_waveform_params.mean_waveforms_file = ...
+            strrep([spk_file_path_itt 'mean_waveforms.npy'], filesep, [filesep filesep]);
         json_struct.mean_waveform_params.samples_per_spike = 82;
         json_struct.mean_waveform_params.pre_samples = 20;
         json_struct.mean_waveform_params.num_epochs = 1;
@@ -439,7 +446,8 @@ for ii = to_proc
         json_struct.mean_waveform_params.spread_threshold = 0.12;
         json_struct.mean_waveform_params.site_range = 16;
 
-        json_struct.noise_waveform_params.classifier_path = [toolbox_path 'forked_toolboxes\ecephys_spike_sorting\modules\nopise_templates\rf_classifier.pkl'];
+        json_struct.noise_waveform_params.classifier_path = ...
+            strrep([toolbox_path 'forked_toolboxes\ecephys_spike_sorting\modules\nopise_templates\rf_classifier.pkl'], filesep, [filesep filesep]);
         json_struct.noise_waveform_params.multiprocessing_worker_count = 10;
 
         json_struct.quality_metrics_params.isi_threshold = 0.0015;
@@ -449,10 +457,11 @@ for ii = to_proc
         json_struct.quality_metrics_params.max_spikes_for_nn = 10000;
         json_struct.quality_metrics_params.n_neighbors = 4;
         json_struct.quality_metrics_params.n_silhouette = 10000;
-        json_struct.quality_metrics_params.quality_metrics_output_file = [spk_file_path_itt 'metrics_test.csv'];
+        json_struct.quality_metrics_params.quality_metrics_output_file = ...
+            strrep([spk_file_path_itt 'metrics_test.csv'], filesep, [filesep filesep]);
         json_struct.quality_metrics_params.drift_metrics_interval_s = 51;
         json_struct.quality_metrics_params.drift_metrics_min_spikes_per_interval = 10;
-        json_struct.quality_metrics_params.include_pc_metrics = True;
+        json_struct.quality_metrics_params.include_pc_metrics = true;
 
         encodedJSON = jsonencode(json_struct);
 
