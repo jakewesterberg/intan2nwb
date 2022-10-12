@@ -8,17 +8,6 @@ function pcMetrics(spike_clusters,
                          max_spikes_for_nn,
                          n_neighbors,
                          do_parallel=True):
-    """
-    :param spike_clusters:
-    :param total_units:
-    :param pc_features:
-    :param pc_feature_ind:
-    :param num_channels_to_compare:
-    :param max_spikes_for_cluster:
-    :param max_spikes_for_nn:
-    :param n_neighbors:
-    :return:
-    """
 
     assert (num_channels_to_compare % 2 == 1)
     half_spread = int((num_channels_to_compare - 1) / 2)
@@ -145,3 +134,57 @@ def calculate_pc_metrics_one_cluster(cluster_peak_channels, idx, cluster_id,clus
         nn_hit_rate = np.nan
         l_ratio = np.nan
     return isolation_distance, d_prime, nn_miss_rate, nn_hit_rate, l_ratio            
+
+    def mahalanobis_metrics(all_pcs, all_labels, this_unit_id):
+
+%     """ Calculates isolation distance and L-ratio (metrics computed from Mahalanobis distance)
+%     Based on metrics described in Schmitzer-Torbert et al. (2005) Neurosci 131: 1-11
+%     Inputs:
+%     -------
+%     all_pcs : numpy.ndarray (num_spikes x PCs)
+%         2D array of PCs for all spikes
+%     all_labels : numpy.ndarray (num_spikes x 0)
+%         1D array of cluster labels for all spikes
+%     this_unit_id : Int
+%         number corresponding to unit for which these metrics will be calculated
+%     Outputs:
+%     --------
+%     isolation_distance : float
+%         Isolation distance of this unit
+%     l_ratio : float
+%         L-ratio for this unit
+%     """
+
+    pcs_for_this_unit = all_pcs[all_labels == this_unit_id,:]
+    pcs_for_other_units = all_pcs[all_labels != this_unit_id, :]
+
+    mean_value = np.expand_dims(np.mean(pcs_for_this_unit,0),0)
+
+    try:
+        VI = np.linalg.inv(np.cov(pcs_for_this_unit.T))
+    except np.linalg.linalg.LinAlgError: # case of singular matrix
+        return np.nan, np.nan
+
+    mahalanobis_other = np.sort(cdist(mean_value,
+                       pcs_for_other_units,
+                       'mahalanobis', VI = VI)[0])
+
+    mahalanobis_self = np.sort(cdist(mean_value,
+                             pcs_for_this_unit,
+                             'mahalanobis', VI = VI)[0])
+
+    n = np.min([pcs_for_this_unit.shape[0], pcs_for_other_units.shape[0]]) # number of spikes
+
+    if n >= 2:
+
+        dof = pcs_for_this_unit.shape[1] # number of features
+
+        l_ratio = np.sum(1 - chi2.cdf(pow(mahalanobis_other,2), dof)) / \
+                mahalanobis_self.shape[0] # normalize by size of cluster, not number of other spikes
+        isolation_distance = pow(mahalanobis_other[n-1],2)
+
+    else:
+        l_ratio = np.nan
+        isolation_distance = np.nan
+
+    return isolation_distance, l_ratio

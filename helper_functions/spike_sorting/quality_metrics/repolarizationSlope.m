@@ -17,12 +17,11 @@ if nargin < 3
     window = 20;
 end
 
-max_point = np.argmax(np.abs(waveform))
+[~,max_point] = max(abs(waveform));
 
-waveform = - waveform * (np.sign(waveform[max_point]))
+waveform = -1.*waveform * (sign(waveform(max_point)));
 
-repolarization_slope = linregress(timestamps[max_point:max_point+window], waveform[max_point:max_point+window])[0]
-
+repolarization_slope = timestamps(max_point:max_point+window) \ waveform(max_point:max_point+window);
 repolarization_slope = repolarization_slope * 1e-6;
 
 end

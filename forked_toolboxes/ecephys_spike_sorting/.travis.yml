@@ -1,0 +1,18 @@
+language: python
+python:
+    - '3.7'
+notifications:
+  email: false
+before_install:
+ - python --version
+ - pip install -U cython setuptools pip numpy
+
+install:
+  - pip install .
+  - pip install pytest-cov
+  - pip install coveralls
+  - pip install codecov
+script: pytest --cov=ecephys_spike_sorting tests/
+after_success:
+  - codecov
+  - coveralls

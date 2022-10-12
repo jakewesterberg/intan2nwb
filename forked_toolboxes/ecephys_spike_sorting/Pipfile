@@ -1,0 +1,40 @@
+[[source]]
+
+url = "https://pypi.python.org/simple"
+verify_ssl = true
+name = "pypi"
+
+[[source]]
+
+url = "http://aibs-artifactory.corp.alleninstitute.org/artifactory/api/pypi/pypi-local/simple"
+verify_ssl = false
+name = "local"
+
+
+[dev-packages]
+
+bumpversion = "*"
+tox = "*"
+coverage = "*"
+sphinx = "*"
+cookiecutter = "*"
+sphinx-gallery = "*"
+pytest = "*"
+"ruamel.yaml" = "*"
+
+[packages]
+
+matplotlib = "*"
+scipy = "*"
+numpy = "*"
+pandas = "*"
+GitPython = "*"
+argschema = "==1.17.5"
+xmljson= "*"
+xarray= "*"
+scikit-learn = "*"
+h5py = "*"
+urllib3 = ">=1.24.2"
+requests = ">=2.20.0"
+marshmallow = "==2.19.2"
+joblib = "*"

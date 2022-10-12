@@ -1,4 +1,4 @@
-function fraction_missing = amplitudeCutoff(amplitudes, num_histogram_bins = 500, histogram_smoothing_value = 3)
+function fraction_missing = amplitudeCutoff(amplitudes, num_histogram_bins, histogram_smoothing_value)
 
 %     """ Calculate approximate fraction of spikes missing from a distribution of amplitudes
 %     Assumes the amplitude histogram is symmetric (not valid in the presence of drift)
@@ -14,17 +14,25 @@ function fraction_missing = amplitudeCutoff(amplitudes, num_histogram_bins = 500
 %         If more than 50% of spikes are missing, an accurate estimate isn't possible
 %     """
 
-h = histcounts(amplitudes, num_histogram_bins, density=True);
+if nargin < 3
+    histogram_smoothing_value = 3;
+end
+if nargin < 4
+    num_histogram_bins = 500;
+end
 
-pdf = gaussian_filter1d(h,histogram_smoothing_value)
-support = b[:-1]
+[h, b] = histcounts(amplitudes, num_histogram_bins, 'Normalization', 'Probability');
 
-peak_index = np.argmax(pdf)
-G = np.argmin(np.abs(pdf[peak_index:] - pdf[0])) + peak_index
+pdf1 = gaussFilter1(1:numel(h),h,histogram_smoothing_value);
+support = b(1:end-1);
 
-bin_size = np.mean(np.diff(support))
+[~, peak_index] = max(pdf1);
+[~, G] = min(abs(pdf1(peak_index:end) - pdf1(1)));
+G = G + peak_index;
 
-fraction_missing = sum(pdf[G:])*bin_size
+bin_size = mean(diff(support));
+
+fraction_missing = sum(pdf(G:end))*bin_size;
 fraction_missing = min([fraction_missing, 0.5]);
 
 end

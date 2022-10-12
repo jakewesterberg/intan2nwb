@@ -1,4 +1,4 @@
-function silhouetteScore(spike_clusters,spike_templates,total_units,pc_features,pc_feature_ind,total_spikes):
+function ss = silhouetteScore(spike_clusters,spike_templates,total_units,pc_features,pc_feature_ind,total_spikes)
 
 %     def score_inner_loop(i, cluster_ids):
 %         """
@@ -10,59 +10,63 @@ function silhouetteScore(spike_clusters,spike_templates,total_units,pc_features,
 %         Returns: scores for dimension j
 %         """
 
-        scores_1d = []
-        for j in cluster_ids:
-            if j > i:
-                inds = np.in1d(cluster_labels, np.array([i, j]))
-                X = all_pcs[inds, :]
-                labels = cluster_labels[inds]
+cluster_ids = unique(spike_clusters);
 
-                # len(np.unique(labels))=1 Can happen if total_spikes is low:
-                if (len(labels) > 2) and (len(np.unique(labels)) > 1):
-                    scores_1d.append(silhouette_score(X, labels))
-                else:
-                    scores_1d.append(np.nan)
-            else:
-                scores_1d.append(np.nan)
-        return scores_1d
+random_spike_inds = randperm(numel(spike_clusters));
+random_spike_inds = random_spike_inds(1:total_spikes);
+num_pc_features = size(pc_features,2);
+num_channels = max(pc_feature_ind) + 1;
 
-    cluster_ids = np.unique(spike_clusters)
+all_pcs = zeros(total_spikes, num_channels * num_pc_features);
 
-    random_spike_inds = np.random.permutation(spike_clusters.size)
-    random_spike_inds = random_spike_inds[:total_spikes]
-    num_pc_features = pc_features.shape[1]
-    num_channels = np.max(pc_feature_ind) + 1
+idx = 1;
+for i = random_spike_inds
 
-    all_pcs = np.zeros((total_spikes, num_channels * num_pc_features))
+    unit_id = spike_templates(i);
+    channels = pc_feature_ind(unit_id,:);
 
-    for idx, i in enumerate(random_spike_inds):
+    for j = 1:num_pc_features
+        all_pcs(idx, channels + num_channels * j) = pc_features(i,j,:);
+    end
+    idx = idx + 1;
+end
 
-        unit_id = spike_templates[i]
-        channels = pc_feature_ind[unit_id,:]
+cluster_labels = squeeze(spike_clusters(random_spike_inds));
 
-        for j in range(0,num_pc_features):
-            all_pcs[idx, channels + num_channels * j] = pc_features[i,j,:]
+SS = nan(total_units, total_units);
 
-    cluster_labels = np.squeeze(spike_clusters[random_spike_inds])
+scores = [score_inner_loop(i, cluster_ids) 
+    for i = cluster_ids
 
-    SS = np.empty((total_units, total_units))
-    SS[:] = np.nan
-
-
-    if do_parallel:
-        from joblib import Parallel, delayed
-        scores = Parallel(n_jobs=-1, verbose=2)(delayed(score_inner_loop)(i, cluster_ids) for i in cluster_ids)
-    else:
-        scores = [score_inner_loop(i, cluster_ids) for i in cluster_ids]
-
-    # Fill the 2d array
     for i, col_score in enumerate(scores):
         for j, one_score in enumerate(col_score):
             SS[i, j] = one_score
+        end
+    end
 
-    with warnings.catch_warnings():
-      warnings.simplefilter("ignore")
-      a = np.nanmin(SS, 0)
-      b = np.nanmin(SS, 1)
+    a = np.nanmin(SS, 0)
+    b = np.nanmin(SS, 1)
 
-    return np.array([np.nanmin([a,b]) for a, b in zip(a,b)])
+    ss=  np.array([np.nanmin([a,b]) for a, b in zip(a,b)])
+
+    end
+
+
+function score_inner_loop(i, cluster_ids)
+scores_1d = [];
+for j = cluster_ids
+    if j > i
+        inds = np.in1d(cluster_labels, np.array([i, j]))
+        X = all_pcs[inds, :]
+        labels = cluster_labels[inds]
+
+        # len(np.unique(labels))=1 Can happen if total_spikes is low:
+        if (len(labels) > 2) and (len(np.unique(labe gls)) > 1):
+            scores_1d.append(silhouette_score(X, labels))
+        else:
+            scores_1d.append(np.nan)
+        end
+    else:
+        scores_1d.append(np.nan)
+    end
+end

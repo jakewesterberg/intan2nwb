@@ -1,20 +1,14 @@
-function driftMetrics(spike_times,
-                            spike_clusters,
-                            spike_templates,
-                            total_units,
-                            pc_features,
-                            pc_feature_ind,
-                            interval_length,
-                            min_spikes_per_interval,
-                            do_parallel=True):
-    def calc_one_cluster(cluster_id):
-        """
-        Helper to calculate drift for one cluster
-        Args:
-            cluster_id:
-        Returns:
-            max_drift, cumulative_drift
-        """
+function driftMetrics(spike_times, spike_clusters, spike_templates, total_units, ...
+    pc_features,pc_feature_ind,interval_length,min_spikes_per_interval)
+
+%         """
+%         Helper to calculate drift for one cluster
+%         Args:
+%             cluster_id:
+%         Returns:
+%             max_drift, cumulative_drift
+%         """
+
         in_cluster = spike_clusters == cluster_id
         times_for_cluster = spike_times[in_cluster]
         depths_for_cluster = depths[in_cluster]
