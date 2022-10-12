@@ -49,7 +49,6 @@ function silhouetteScore(spike_clusters,spike_templates,total_units,pc_features,
     SS[:] = np.nan
 
 
-    # Build lists
     if do_parallel:
         from joblib import Parallel, delayed
         scores = Parallel(n_jobs=-1, verbose=2)(delayed(score_inner_loop)(i, cluster_ids) for i in cluster_ids)
