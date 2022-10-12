@@ -517,14 +517,16 @@ for ii = to_proc
 
         eval_str = [];
         for kk = 1 : numel(temp_fields)
-            eval_str = [ eval_str ',convertStringsToChars("' temp_fields{kk} '"),types.hdmf_common.VectorData(convertStringsToChars("data"), event_data{jj}.' temp_fields{kk} ')'];
+            eval_str = [ ...
+                eval_str ...
+                ',convertStringsToChars("' temp_fields{kk} '"),types.hdmf_common.VectorData(convertStringsToChars("data"), event_data{jj}.' temp_fields{kk} ')'];
         end
         eval_str = [ 
             'trials=types.core.TimeIntervals(convertStringsToChars("colnames"),temp_fields' ...
             eval_str ...
-            ',convertStringsToChars("id"),types.hdmf_common.ElementIdentifiers(convertStringsToChars("data"),0:numel(event_data{jj}.start_time)-1));'];
+            ',convertStringsToChars("id"),types.hdmf_common.ElementIdentifiers(convertStringsToChars("data"),0:numel(event_data{jj}.start_time)-1))'];
 
-        eval(eval_str); clear eval_str
+        eval(eval_str)
         nwb.intervals.set(event_data{jj}.task, trials); clear trials
     end
 

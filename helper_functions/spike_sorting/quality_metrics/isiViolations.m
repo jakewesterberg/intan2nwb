@@ -17,6 +17,13 @@ function [fpRate, num_violations] = isiViolations(spike_train, min_time, max_tim
 %A unit with lots of contamination has a fpRate > 1.0
 % num_violations : total number of violations
 
+if nargin < 4
+    isi_threshold = 0.0015;
+end
+if nargin < 5
+    min_isi = 0;
+end
+
 duplicate_spikes = [0; diff(spike_train) <= min_isi];
 
 spike_train = spike_train(~duplicate_spikes);
