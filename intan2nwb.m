@@ -31,6 +31,7 @@ save_nwb                        = false;
 reprocess_bin                   = false;
 
 toolbox_path                    = 'C:\Users\westerja\Documents\GitHub\intan2nwb\';
+conda_path                      = 'C:\Users\westerja\Anaconda3';
 
 in_file_path                    = 'Z:\_DATA\_BL_DATA_PIPELINE\_0_RAW_DATA\';
 out_file_path                   = 'Z:\_DATA\_BL_DATA_PIPELINE\_5_NWB_DATA\';
@@ -424,7 +425,7 @@ for ii = to_proc
         json_struct.ephys_params.sample_rate = intan_header.sampling_rate;
         json_struct.ephys_params.bit_volts = 0.195;
         json_struct.ephys_params.num_channels = n_channels;
-        json_struct.ephys_params.reference_channels = n_channels/2;
+        json_struct.ephys_params.reference_channels = []; %n_channels/2;
         json_struct.ephys_params.vertical_site_spacing = mean(diff(temp_Z));
         json_struct.ephys_params.ap_band_file = ...
             strrep([bin_file_path file_ident filesep file_ident '_probe-' num2str(jj-1) '.bin'], filesep, [filesep filesep]);
@@ -467,21 +468,25 @@ for ii = to_proc
 
         fid = fopen([spk_file_path_itt 'ecephys_spike_sorting_input.json'], 'w');
         fprintf(fid, encodedJSON);
-        fclose('all')
+        fclose('all');
 
         fid = fopen([spk_file_path_itt 'ecephys_spike_sorting_adapter.bat'], 'w');
         fprintf(fid, '%s\n', '@echo OFF');
-        fprintf(fid, '%s\n', 'set CONDAPATH=C:\Users\westerja\Anaconda3');
+        fprintf(fid, '%s\n', ['set ' conda_path]);
         fprintf(fid, '%s\n', 'set ENVNAME=ecephys');
         fprintf(fid, '%s\n', 'if %ENVNAME%==base (set ENVPATH=%CONDAPATH%) else (set ENVPATH=%CONDAPATH%\envs\%ENVNAME%)');
         fprintf(fid, '%s\n', 'call %CONDAPATH%\Scripts\activate.bat %ENVPATH%');
         fprintf(fid, '%s\n', 'set GIT_PYTHON_REFRESH=quiet');
         fprintf(fid, '%s\n', 'set PYTHONIOENCODING=utf-8');
-        fprintf(fid, '%s\n', 'cd C:\Users\westerja\Documents\GitHub\intan2nwb\forked_toolboxes\ecephys_spike_sorting');
-        fprintf(fid, '%s\n', 'python -m ecephys_spike_sorting.modules.kilosort_postprocessing --input_json C:\Users\westerja\Desktop\ecephys_test\ecephys_spike_sorting_input.json --output_json C:\Users\westerja\Desktop\ecephys_test\ecephys_spike_sorting_output.json');
-        fprintf(fid, '%s\n', 'python -m ecephys_spike_sorting.modules.mean_waveforms --input_json C:\Users\westerja\Desktop\ecephys_test\ecephys_spike_sorting_input.json --output_json C:\Users\westerja\Desktop\ecephys_test\ecephys_spike_sorting_output.json');
-        fprintf(fid, '%s\n', 'python -m ecephys_spike_sorting.modules.noise_templates --input_json C:\Users\westerja\Desktop\ecephys_test\ecephys_spike_sorting_input.json --output_json C:\Users\westerja\Desktop\ecephys_test\ecephys_spike_sorting_noise_output.json');
-        fprintf(fid, '%s\n', 'python -m ecephys_spike_sorting.modules.quality_metrics --input_json C:\Users\westerja\Desktop\ecephys_test\ecephys_spike_sorting_input.json --output_json C:\Users\westerja\Desktop\ecephys_test\ecephys_spike_sorting_quality_output.json');
+        fprintf(fid, '%s\n', ['cd ' toolbox_path 'forked_toolboxes\ecephys_spike_sorting']);
+        fprintf(fid, '%s\n', ['python -m ecephys_spike_sorting.modules.kilosort_postprocessing --input_json ' ...
+            spk_file_path_itt 'ecephys_spike_sorting_input.json --output_json ' spk_file_path_itt 'ecephys_spike_sorting_kspp_output.json']);
+        fprintf(fid, '%s\n', ['python -m ecephys_spike_sorting.modules.mean_waveforms --input_json ' ...
+            spk_file_path_itt 'ecephys_spike_sorting_input.json --output_json' spk_file_path_itt 'ecephys_spike_sorting_waveforms_output.json']);
+        fprintf(fid, '%s\n', ['python -m ecephys_spike_sorting.modules.noise_templates --input_json ' ...
+            spk_file_path_itt 'ecephys_spike_sorting_input.json --output_json' spk_file_path_itt 'ecephys_spike_sorting_noise_output.json']);
+        fprintf(fid, '%s\n', ['python -m ecephys_spike_sorting.modules.quality_metrics --input_json '...
+            spk_file_path_itt 'ecephys_spike_sorting_input.json --output_json ' spk_file_path_itt 'ecephys_spike_sorting_quality_output.json']);
         fprintf(fid, '%s\n', 'call conda deactivate');
         fclose('all');
 
