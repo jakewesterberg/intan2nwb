@@ -447,7 +447,7 @@ for ii = to_proc
         json_struct.mean_waveform_params.site_range = 16;
 
         json_struct.noise_waveform_params.classifier_path = ...
-            strrep([toolbox_path 'forked_toolboxes\ecephys_spike_sorting\modules\nopise_templates\rf_classifier.pkl'], filesep, [filesep filesep]);
+            strrep([toolbox_path 'forked_toolboxes\ecephys_spike_sorting\modules\noise_templates\rf_classifier.pkl'], filesep, [filesep filesep]);
         json_struct.noise_waveform_params.multiprocessing_worker_count = 10;
 
         json_struct.quality_metrics_params.isi_threshold = 0.0015;
@@ -468,6 +468,22 @@ for ii = to_proc
         fid = fopen([spk_file_path_itt 'ecephys_spike_sorting_input.json'], 'w');
         fprintf(fid, encodedJSON);
         fclose('all')
+
+        fid = fopen([spk_file_path_itt 'ecephys_spike_sorting_adapter.bat'], 'w');
+        fprintf(fid, '%s\n', '@echo OFF');
+        fprintf(fid, '%s\n', 'set CONDAPATH=C:\Users\westerja\Anaconda3');
+        fprintf(fid, '%s\n', 'set ENVNAME=ecephys');
+        fprintf(fid, '%s\n', 'if %ENVNAME%==base (set ENVPATH=%CONDAPATH%) else (set ENVPATH=%CONDAPATH%\envs\%ENVNAME%)');
+        fprintf(fid, '%s\n', 'call %CONDAPATH%\Scripts\activate.bat %ENVPATH%');
+        fprintf(fid, '%s\n', 'set GIT_PYTHON_REFRESH=quiet');
+        fprintf(fid, '%s\n', 'set PYTHONIOENCODING=utf-8');
+        fprintf(fid, '%s\n', 'cd C:\Users\westerja\Documents\GitHub\intan2nwb\forked_toolboxes\ecephys_spike_sorting');
+        fprintf(fid, '%s\n', 'python -m ecephys_spike_sorting.modules.kilosort_postprocessing --input_json C:\Users\westerja\Desktop\ecephys_test\ecephys_spike_sorting_input.json --output_json C:\Users\westerja\Desktop\ecephys_test\ecephys_spike_sorting_output.json');
+        fprintf(fid, '%s\n', 'python -m ecephys_spike_sorting.modules.mean_waveforms --input_json C:\Users\westerja\Desktop\ecephys_test\ecephys_spike_sorting_input.json --output_json C:\Users\westerja\Desktop\ecephys_test\ecephys_spike_sorting_output.json');
+        fprintf(fid, '%s\n', 'python -m ecephys_spike_sorting.modules.noise_templates --input_json C:\Users\westerja\Desktop\ecephys_test\ecephys_spike_sorting_input.json --output_json C:\Users\westerja\Desktop\ecephys_test\ecephys_spike_sorting_noise_output.json');
+        fprintf(fid, '%s\n', 'python -m ecephys_spike_sorting.modules.quality_metrics --input_json C:\Users\westerja\Desktop\ecephys_test\ecephys_spike_sorting_input.json --output_json C:\Users\westerja\Desktop\ecephys_test\ecephys_spike_sorting_quality_output.json');
+        fprintf(fid, '%s\n', 'call conda deactivate');
+        fclose('all');
 
         spike_times = [];
         spike_times_index = [];
