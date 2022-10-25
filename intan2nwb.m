@@ -27,7 +27,7 @@ function intan2nwb(varargin)
 workers                         = 0; % use parallel computing where possible
 
 skip_completed                  = false;
-save_nwb                        = false;
+save_nwb                        = true;
 reprocess_bin                   = false;
 
 toolbox_path                    = 'C:\Users\westerja\Documents\GitHub\intan2nwb\';
@@ -46,6 +46,7 @@ quick_storage_path               = [userpath filesep 'kilosort_scratch'];
 
 params.downsample_fs            = 1000;
 
+params.interpret_events         = true;
 params.car_bin                  = false;
 params.trigger_PRO              = false; % not useable now.
 
@@ -426,7 +427,7 @@ for ii = to_proc
         json_struct.ephys_params.bit_volts = 0.195;
         json_struct.ephys_params.num_channels = n_channels;
         json_struct.ephys_params.reference_channels = []; %n_channels/2;
-        json_struct.ephys_params.vertical_site_spacing = mean(diff(temp_Z));
+        json_struct.ephys_params.vertical_site_spacing = mean(diff(z));
         json_struct.ephys_params.ap_band_file = ...
             strrep([bin_file_path file_ident filesep file_ident '_probe-' num2str(jj-1) '.bin'], filesep, [filesep filesep]);
         json_struct.ephys_params.cluster_group_file_name = 'cluster_group.tsv.v2';
@@ -472,7 +473,7 @@ for ii = to_proc
 
         fid = fopen([spk_file_path_itt 'ecephys_spike_sorting_adapter.bat'], 'w');
         fprintf(fid, '%s\n', '@echo OFF');
-        fprintf(fid, '%s\n', ['set ' conda_path]);
+        fprintf(fid, '%s\n', ['set CONDAPATH=' conda_path]);
         fprintf(fid, '%s\n', 'set ENVNAME=ecephys');
         fprintf(fid, '%s\n', 'if %ENVNAME%==base (set ENVPATH=%CONDAPATH%) else (set ENVPATH=%CONDAPATH%\envs\%ENVNAME%)');
         fprintf(fid, '%s\n', 'call %CONDAPATH%\Scripts\activate.bat %ENVPATH%');
@@ -482,29 +483,70 @@ for ii = to_proc
         fprintf(fid, '%s\n', ['python -m ecephys_spike_sorting.modules.kilosort_postprocessing --input_json ' ...
             spk_file_path_itt 'ecephys_spike_sorting_input.json --output_json ' spk_file_path_itt 'ecephys_spike_sorting_kspp_output.json']);
         fprintf(fid, '%s\n', ['python -m ecephys_spike_sorting.modules.mean_waveforms --input_json ' ...
-            spk_file_path_itt 'ecephys_spike_sorting_input.json --output_json' spk_file_path_itt 'ecephys_spike_sorting_waveforms_output.json']);
+            spk_file_path_itt 'ecephys_spike_sorting_input.json --output_json ' spk_file_path_itt 'ecephys_spike_sorting_waveforms_output.json']);
         fprintf(fid, '%s\n', ['python -m ecephys_spike_sorting.modules.noise_templates --input_json ' ...
-            spk_file_path_itt 'ecephys_spike_sorting_input.json --output_json' spk_file_path_itt 'ecephys_spike_sorting_noise_output.json']);
+            spk_file_path_itt 'ecephys_spike_sorting_input.json --output_json ' spk_file_path_itt 'ecephys_spike_sorting_noise_output.json']);
         fprintf(fid, '%s\n', ['python -m ecephys_spike_sorting.modules.quality_metrics --input_json '...
             spk_file_path_itt 'ecephys_spike_sorting_input.json --output_json ' spk_file_path_itt 'ecephys_spike_sorting_quality_output.json']);
         fprintf(fid, '%s\n', 'call conda deactivate');
         fclose('all');
 
-        spike_times = [];
-        spike_times_index = [];
+        system([spk_file_path_itt 'ecephys_spike_sorting_adapter.bat']);
+        
         unit_idents = unique(rez.st3(:,2))';
+        spike_times = cell(1, numel(unit_idents));
+        ctr_i=0;
         for kk = unit_idents
-            spike_times = [spike_times; rez.st3(rez.st3(:,2)==kk,1)./intan_header.sampling_rate];
-            spike_times_index = [spike_times_index; sum(rez.st3(:,2)==kk)];
+            ctr_i = ctr_i + 1;
+            spike_times{ctr_i} = (rez.st3(rez.st3(:,2)==kk,1)./intan_header.sampling_rate).';
+
+            % isi measures
+            temp_isi = diff(spike_times{ctr_i});
+            isi(ctr_i) = mean(temp_isi);
+            isi_cv(ctr_i) = std(temp_isi) / isi(ctr_i);
+            isi_0 = temp_isi(1:end-1);
+            isi_1 = temp_isi(2:end);
+            isi_lv(ctr_i) = (3/(numel(temp_isi)-1)) * sum(((isi_0-isi_1)./(isi_0+isi_1)).^2);
         end
+        
+        % grab spike times and indices
+        [spike_times_vector, spike_times_index] = util.create_indexed_column(spike_times);
+
+        % grab the waveforms
+        mean_wave = readNPY([spk_file_path_itt 'mean_waveforms.npy']);
+        mean_wave_reshape = [];
+        for kk = 1 : numel(unit_idents)
+            mean_wave_reshape = [mean_wave_reshape, squeeze(mean_wave(kk,:,:)).'];
+        end
+        clear mean_wave
+
+        % grab the metrics
+        fid = fopen([spk_file_path_itt 'metrics_test.csv'],'rt');
+        C = textscan(fid, '%f %f %f %f %f %f %f %f %f %f %f %f %f %f %s %s %f %f %f %f %f %f %f %f %f %f %f', ...
+            'Delimiter', ',', 'HeaderLines', 1, 'EmptyValue', NaN);
+        fclose(fid);
+        [col_id, cluster_id, firing_rate, presence_ratio, isi_violations, amplitude_cutoff, isolation_distance, l_ratio, ...
+            d_prime, nn_hit_rate, nn_miss_rate, silhouette_score, max_drift, cumulative_drift, epoch_name_quality_metrics, ...
+            epoch_name_waveform_metrics, peak_channel_id, snr, waveform_duration, waveform_halfwidth, PT_ratio, repolarization_slope, ...
+            recovery_slope, amplitude, spread, velocity_above, velocity_below] = deal(C{:}); clear C;
+
+        % generate other indices
+        waveform_mean_index = n_channels:n_channels:n_channels*numel(unit_idents);
+        local_index = 0:numel(unit_idents);
+
+        % grab noise units
+        fid = fopen([spk_file_path_itt 'cluster_group.tsv.v2'],'rt');
+        C = textscan(fid, '%f %s', 'Delimiter', ',', 'HeaderLines', 1);
+        fclose(fid);
+        [~, quality] = deal(C{:});
 
         nwb.units = types.core.Units( ...
             'colnames', {'spike_times'}, ...
             'id', types.hdmf_common.ElementIdentifiers( ...
-            'data', int64(0:numel(spikes_times_index) - 1) ...
-            ), ...
-            'spike_times', spike_times, ...
-            'spike_times_index', spike_times_index ...
+            'data', int64(0:numel(unit_idents) - 1)), ...
+            'spike_times', spike_times_vector, ...
+            'spike_times_index', spike_times_index, ...
+            'waveform_mean', types.hdmf_common.VectorData('data', mean_wave_reshape, 'description', '2D Waveform') ...
             );
 
     end
@@ -590,7 +632,10 @@ for ii = to_proc
     intan_code_values = bit2int(flip(intan_code_values),8)';
 
     % Dientangle event codes...
-    event_data = identEvents(intan_code_values, intan_code_times);
+    if params.interpret_events
+        event_data = identEvents(intan_code_values, intan_code_times);
+    else
+    end
 
     for jj = 1 : numel(event_data)
         temp_fields = fields(event_data{jj});
