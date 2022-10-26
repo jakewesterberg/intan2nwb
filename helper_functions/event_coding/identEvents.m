@@ -19,7 +19,7 @@ unique_task_idents  = { ...
 tasks_completed = unique(codes(find(codes==100)+1))';
 
 if isempty(tasks_completed)
-    event_data{1} = taskPassiveGLOv1(codes, times);
+    event_data{1} = VANDERBILT_PassiveGLOv1(codes, times);
 else
 
     for ii = tasks_completed

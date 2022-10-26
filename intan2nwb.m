@@ -246,10 +246,14 @@ for ii = to_proc
         lfp = zeros(n_channels, downsample_size);
         muae = zeros(n_channels, downsample_size);
 
+        % Set computations to CPU, you are limited by RAM/VRAM at this
+        % point. might as well use whatever you have more of...
         if workers == 0
             test_fid = fopen(in_file_path_itt + "\amp-" + intan_header.amplifier_channels(1).native_channel_name + ".dat");
             test_size = byteSize(double(fread(test_fid, n_samples, 'int16')) * 0.195);
-            workers = floor((gpuDevice().AvailableMemory) / (8*test_size));
+            %workers = floor((gpuDevice().AvailableMemory) / (6*test_size));
+            mem = memory;
+            workers = floor((mem.MemAvailableAllArrays) / (6*test_size));
             if workers > feature('numcores')
                 workers = feature('numcores');
             elseif workers == 0
@@ -262,18 +266,19 @@ for ii = to_proc
         pvar_amp_ch = cat(1,{intan_header.amplifier_channels.native_channel_name});
         pvar_ds_factor = params.downsample_factor;
 
-%         if ~isempty(gcp('nocreate'))
-%             delete(gcp);
-%         end
-%         pool1 = parpool(workers);
-%         parfor kk = 1:n_channels
-%             % Open file and init data
-%             current_fid             = fopen(in_file_path_itt + "\amp-" + pvar_amp_ch{kk} + ".dat");
-% 
-%             % Setup array on GPU or in mem depending on run parameters
-%             current_data            = gpuArray(double(fread(current_fid, n_samples, 'int16')) * 0.195);
-% 
-%             % Do data type specific filtering
+        if ~isempty(gcp('nocreate'))
+            delete(gcp);
+        end
+        pool1 = parpool(workers);
+        parfor kk = 1:n_channels
+            % Open file and init data
+            current_fid             = fopen(in_file_path_itt + "\amp-" + pvar_amp_ch{kk} + ".dat");
+
+            % Setup array on GPU or in mem depending on run parameters
+            %current_data            = gpuArray(double(fread(current_fid, n_samples, 'int16')) * 0.195);
+            current_data            = double(fread(current_fid, n_samples, 'int16')) * 0.195;
+
+            % Do data type specific filtering
 %             muae(kk,:)  = gather(downsample(filtfilt(muae_power_bwb, muae_power_bwa, ...
 %                 abs(filtfilt(muae_bwb, muae_bwa, ...
 %                 filtfilt(DC_offset_bwb, DC_offset_bwa, ...
@@ -282,46 +287,54 @@ for ii = to_proc
 %                 filtfilt(DC_offset_bwb, DC_offset_bwa, ...
 %                 current_data)), pvar_ds_factor));
 %             reset(gpuDevice)
-% 
-%             % Close file
-%             fclose(current_fid);
-%             disp([num2str(kk) '/' num2str(n_channels) ' COMPLETED.'])
-%         end
-%         delete(pool1)
-%         clear pvar_*
-% 
-%         %Rearrange the channels to the order on the probe (starts at 0, +1 so it
-%         %matches matlab indexing)
-%         muae = muae(channel_map+1,:);
-%         lfp = lfp(channel_map+1,:);
-% 
-%         lfp_electrical_series = types.core.ElectricalSeries( ...
-%             'electrodes', electrode_table_region,...
-%             'starting_time', 0.0, ... % seconds
-%             'starting_time_rate', params.downsample_fs, ... % Hz
-%             'data', lfp, ...
-%             'data_unit', 'uV', ...
-%             'filtering', '4th order Butterworth 1-250 Hz (DC offset high-pass 1st order Butterworth 0.1 Hz)', ...
-%             'timestamps', time_stamps_s_ds);
-% 
-%         lfp_series = types.core.LFP(['probe_' num2str(jj-1) '_lfp_data'], lfp_electrical_series);
-%         nwb.acquisition.set(['probe_' num2str(jj-1) '_lfp'], lfp_series);
-%         clear lfp
-% 
-%         muae_electrical_series = types.core.ElectricalSeries( ...
-%             'electrodes', electrode_table_region,...
-%             'starting_time', 0.0, ... % seconds
-%             'starting_time_rate', params.downsample_fs, ... % Hz
-%             'data', muae, ...
-%             'data_unit', 'uV', ...
-%             'filtering', '4th order Butterworth 500-500 Hz, full-wave rectified, then low pass 4th order Butterworth 250 Hz (DC offset high-pass 1st order Butterworth 0.1 Hz)', ...
-%             'timestamps', time_stamps_s_ds);
-% 
-%         muae_series = types.core.LFP('ElectricalSeries', muae_electrical_series);
-%         nwb.acquisition.set(['probe_' num2str(jj-1) '_muae'], muae_series);
-%         clear muae
-% 
-%         reset(gpuDevice)
+            muae(kk,:)  = downsample(filtfilt(muae_power_bwb, muae_power_bwa, ...
+                abs(filtfilt(muae_bwb, muae_bwa, ...
+                filtfilt(DC_offset_bwb, DC_offset_bwa, ...
+                current_data)))), pvar_ds_factor);
+            lfp(kk,:)   = downsample(filtfilt(lfp_bwb, lfp_bwa, ...
+                filtfilt(DC_offset_bwb, DC_offset_bwa, ...
+                current_data)), pvar_ds_factor);
+%            reset(gpuDevice)
+
+            % Close file
+            fclose(current_fid);
+            disp([num2str(kk) '/' num2str(n_channels) ' COMPLETED.'])
+        end
+        delete(pool1)
+        clear pvar_*
+
+        %Rearrange the channels to the order on the probe (starts at 0, +1 so it
+        %matches matlab indexing)
+        muae = muae(channel_map+1,:);
+        lfp = lfp(channel_map+1,:);
+
+        lfp_electrical_series = types.core.ElectricalSeries( ...
+            'electrodes', electrode_table_region,...
+            'starting_time', 0.0, ... % seconds
+            'starting_time_rate', params.downsample_fs, ... % Hz
+            'data', lfp, ...
+            'data_unit', 'uV', ...
+            'filtering', '4th order Butterworth 1-250 Hz (DC offset high-pass 1st order Butterworth 0.1 Hz)', ...
+            'timestamps', time_stamps_s_ds);
+
+        lfp_series = types.core.LFP(['probe_' num2str(jj-1) '_lfp_data'], lfp_electrical_series);
+        nwb.acquisition.set(['probe_' num2str(jj-1) '_lfp'], lfp_series);
+        clear lfp
+
+        muae_electrical_series = types.core.ElectricalSeries( ...
+            'electrodes', electrode_table_region,...
+            'starting_time', 0.0, ... % seconds
+            'starting_time_rate', params.downsample_fs, ... % Hz
+            'data', muae, ...
+            'data_unit', 'uV', ...
+            'filtering', '4th order Butterworth 500-500 Hz, full-wave rectified, then low pass 4th order Butterworth 250 Hz (DC offset high-pass 1st order Butterworth 0.1 Hz)', ...
+            'timestamps', time_stamps_s_ds);
+
+        muae_series = types.core.LFP('ElectricalSeries', muae_electrical_series);
+        nwb.acquisition.set(['probe_' num2str(jj-1) '_muae'], muae_series);
+        clear muae
+
+        reset(gpuDevice)
 
         if ~exist([bin_file_path file_ident filesep], 'dir')
             mkdir([bin_file_path file_ident filesep])
@@ -502,11 +515,12 @@ for ii = to_proc
 
             % isi measures
             temp_isi = diff(spike_times{ctr_i});
-            isi(ctr_i) = mean(temp_isi);
-            isi_cv(ctr_i) = std(temp_isi) / isi(ctr_i);
+            isi_mean(ctr_i) = mean(temp_isi);
+            isi_cv(ctr_i) = std(temp_isi) / isi_mean(ctr_i);
             isi_0 = temp_isi(1:end-1);
             isi_1 = temp_isi(2:end);
             isi_lv(ctr_i) = (3/(numel(temp_isi)-1)) * sum(((isi_0-isi_1)./(isi_0+isi_1)).^2);
+
         end
         
         % grab spike times and indices
@@ -519,6 +533,10 @@ for ii = to_proc
             mean_wave_reshape = [mean_wave_reshape, squeeze(mean_wave(kk,:,:)).'];
         end
         clear mean_wave
+
+        % grab spike templates/amps
+        spike_amplitudes = readNPY([spk_file_path_itt 'amplitudes.npy']);
+        spike_amplitudes_index = spike_times_index.data(:);
 
         % grab the metrics
         fid = fopen([spk_file_path_itt 'metrics_test.csv'],'rt');
@@ -546,7 +564,39 @@ for ii = to_proc
             'data', int64(0:numel(unit_idents) - 1)), ...
             'spike_times', spike_times_vector, ...
             'spike_times_index', spike_times_index, ...
-            'waveform_mean', types.hdmf_common.VectorData('data', mean_wave_reshape, 'description', '2D Waveform') ...
+            'waveform_mean', types.hdmf_common.VectorData('data', mean_wave_reshape, 'description', '2D Waveform'), ...
+            'waveform_mean_index', types.hdmf_common.VectorData('data', waveform_mean_index, 'description', ''), ...
+            'PT_ratio', types.hdmf_common.VectorData('data', PT_ratio, 'description', ''), ...
+            'amplitude', types.hdmf_common.VectorData('data', amplitude, 'description', ''), ...
+            'amplitude_cutoff', types.hdmf_common.VectorData('data', amplitude_cutoff, 'description', ''), ...
+            'cluster_id', types.hdmf_common.VectorData('data', cluster_id, 'description', ''), ...
+            'cumulative_drift', types.hdmf_common.VectorData('data', cumulative_drift, 'description', ''), ...
+            'd_prime', types.hdmf_common.VectorData('data', d_prime, 'description', ''), ...
+            'firing_rate', types.hdmf_common.VectorData('data', firing_rate, 'description', ''), ...
+            'isi_violations', types.hdmf_common.VectorData('data', isi_violations, 'description', ''), ...
+            'isolation_distance', types.hdmf_common.VectorData('data', isolation_distance, 'description', ''), ...
+            'l_ratio', types.hdmf_common.VectorData('data', l_ratio, 'description', ''), ...
+            'local_index', types.hdmf_common.VectorData('data', local_index, 'description', ''), ...
+            'max_drift', types.hdmf_common.VectorData('data', max_drift, 'description', ''), ...
+            'nn_hit_rate', types.hdmf_common.VectorData('data', nn_hit_rate, 'description', ''), ...
+            'nn_miss_rate', types.hdmf_common.VectorData('data', nn_miss_rate, 'description', ''), ...
+            'peak_channel_id', types.hdmf_common.VectorData('data', peak_channel_id, 'description', ''), ...
+            'presence_ratio', types.hdmf_common.VectorData('data', presence_ratio, 'description', ''), ...
+            'quality', types.hdmf_common.VectorData('data', quality, 'description', ''), ...
+            'recovery_slope', types.hdmf_common.VectorData('data', recovery_slope, 'description', ''), ...
+            'repolarization_slope', types.hdmf_common.VectorData('data', repolarization_slope, 'description', ''), ...
+            'silhouette_score', types.hdmf_common.VectorData('data', silhouette_score, 'description', ''), ...
+            'snr', types.hdmf_common.VectorData('data', snr, 'description', ''), ...
+            'spike_amplitudes', types.hdmf_common.VectorData('data', spike_amplitudes, 'description', ''), ...
+            'spike_amplitudes_index', types.hdmf_common.VectorData('data', spike_amplitudes_index, 'description', ''), ...
+            'spread', types.hdmf_common.VectorData('data', spread, 'description', ''), ...
+            'velocity_above', types.hdmf_common.VectorData('data', velocity_above, 'description', ''), ...
+            'velocity_below', types.hdmf_common.VectorData('data', velocity_below, 'description', ''), ...
+            'waveform_duration', types.hdmf_common.VectorData('data', waveform_duration, 'description', ''), ...
+            'waveform_halfwidth', types.hdmf_common.VectorData('data', waveform_halfwidth, 'description', ''), ...
+            'isi_mean', types.hdmf_common.VectorData('data', isi_mean, 'description', ''), ...
+            'isi_cv', types.hdmf_common.VectorData('data', isi_cv, 'description', ''), ...
+            'isi_lv', types.hdmf_common.VectorData('data', isi_lv, 'description', '') ...
             );
 
     end
@@ -564,7 +614,7 @@ for ii = to_proc
 
         temp_dat(1,:) = downsample(intan_header.board_adc_data(jj, :), params.downsample_factor);
 
-        if strcmp(lower(adc_map), 'eye_x')
+        if strcmp(lower(adc_map(jj)), 'eye_x')
 
             find_y = find(ismember(lower(adc_map), "eye_y"));
             temp_dat(2,:) = downsample(intan_header.board_adc_data(find_y, :), params.downsample_factor);
@@ -594,12 +644,9 @@ for ii = to_proc
 
             pupil_tracking = types.core.PupilTracking();
             pupil_tracking.timeseries.set('pupil_diameter', pupil_diameter);
-
-            % behavior_processing_module = types.core.ProcessingModule("stores behavioral data.");
-            behavior_processing_module.nwbdatainterface.set('EyeTracking', eye_tracking);
-
-            % behavior_processing_module = types.core.ProcessingModule("stores behavioral data.");
-            behavior_processing_module.nwbdatainterface.set('PupilTracking', pupil_tracking);
+            
+            nwb.acquisition.set('EyeTracking', eye_tracking);
+            nwb.acquisition.set('PupilTracking', pupil_tracking);
 
             clear temp_* find_*
         end
