@@ -561,7 +561,9 @@ for ii = to_proc
         fid = fopen([spk_file_path_itt 'cluster_group.tsv.v2'],'rt');
         C = textscan(fid, '%f %s', 'Delimiter', ',', 'HeaderLines', 1);
         fclose(fid);
-        [~, quality] = deal(C{:});
+        [quality_cluster_id, quality] = deal(C{:});
+        quality = quality(quality_cluster_id == cluster_id);
+        clear quality_cluster_id C
 
         % gen colnames
         colnames = {'snr';'cumulative_drift';'peak_channel_id';'quality';'local_index';'spread';'max_drift';'waveform_duration';'amplitude'; ...
