@@ -58,56 +58,56 @@ for ii = 1 : numel(codes)
             case 10
                 task_data.orientation(ii_ctr) = NaN;
                 task_data.presentation(ii_ctr) = NaN;
-                task_data.sequence_type = block_mat(current_trial_seq);
-                task_data.notes(ii_ctr) = temp_note;
-                task_data.event_code_type(ii_ctr) = "fix cue appearance";
+                task_data.sequence_type{ii_ctr} = block_mat(current_trial_seq);
+                task_data.notes{ii_ctr} = temp_note;
+                task_data.event_code_type{ii_ctr} = "fix cue appearance";
             case 255
                 task_data.orientation(ii_ctr) = NaN;
                 task_data.presentation(ii_ctr) = NaN;
-                task_data.sequence_type = block_mat(current_trial_seq);
-                task_data.notes(ii_ctr) = temp_note;
-                task_data.event_code_type(ii_ctr) = "fixation made";
+                task_data.sequence_type{ii_ctr} = block_mat(current_trial_seq);
+                task_data.notes{ii_ctr} = temp_note;
+                task_data.event_code_type{ii_ctr} = "fixation made";
             case 20
                 task_data.orientation(ii_ctr) = condition_mat(current_trial_type(1));
                 task_data.presentation(ii_ctr) = 1;
-                task_data.sequence_type(ii_ctr) = block_mat(current_trial_seq);
-                task_data.notes(ii_ctr) = temp_note;
-                task_data.event_code_type(ii_ctr) = "presentation 1";
+                task_data.sequence_type{ii_ctr} = block_mat(current_trial_seq);
+                task_data.notes{ii_ctr} = temp_note;
+                task_data.event_code_type{ii_ctr} = "presentation 1";
             case 22
                 task_data.orientation(ii_ctr) = condition_mat(current_trial_type(2));
                 task_data.presentation(ii_ctr) = 2;
-                task_data.sequence_type(ii_ctr) = block_mat(current_trial_seq);
-                task_data.notes(ii_ctr) = temp_note;
-                task_data.event_code_type(ii_ctr) = "presentation 2";
+                task_data.sequence_type{ii_ctr} = block_mat(current_trial_seq);
+                task_data.notes{ii_ctr} = temp_note;
+                task_data.event_code_type{ii_ctr} = "presentation 2";
             case 24
                 task_data.orientation(ii_ctr) = condition_mat(current_trial_type(3));
                 task_data.presentation(ii_ctr) = 3;
-                task_data.sequence_type(ii_ctr) = block_mat(current_trial_seq);
-                task_data.notes(ii_ctr) = temp_note;
-                task_data.event_code_type(ii_ctr) = "presentation 3";
+                task_data.sequence_type{ii_ctr} = block_mat(current_trial_seq);
+                task_data.notes{ii_ctr} = temp_note;
+                task_data.event_code_type{ii_ctr} = "presentation 3";
             case 30
                 task_data.orientation(ii_ctr) = condition_mat(current_trial_type(4));
                 task_data.presentation(ii_ctr) = 4;
-                task_data.sequence_type(ii_ctr) = block_mat(current_trial_seq);
-                task_data.notes(ii_ctr) = temp_note;
-                task_data.event_code_type(ii_ctr) = "presentation 4";
+                task_data.sequence_type{ii_ctr} = block_mat(current_trial_seq);
+                task_data.notes{ii_ctr} = temp_note;
+                task_data.event_code_type{ii_ctr} = "presentation 4";
             case 40
                 task_data.orientation(ii_ctr) = NaN;
                 task_data.presentation(ii_ctr) = NaN;
-                task_data.sequence_type(ii_ctr) = block_mat(current_trial_seq);
-                task_data.notes(ii_ctr) = temp_note;
-                task_data.event_code_type(ii_ctr) = "reward";
+                task_data.sequence_type{ii_ctr} = block_mat(current_trial_seq);
+                task_data.notes{ii_ctr} = temp_note;
+                task_data.event_code_type{ii_ctr} = "reward";
         end
         ii_ctr = ii_ctr +1;
     end
 end
 
-task_data.correct = zeros(numel(task_data.codes), 1, 'logical');
+task_data.correct = zeros(numel(task_data.codes), 1, 'int8');
 u_trials = unique(task_data.trial_num);
 for ii = u_trials
     temp_inds = sum(task_data.codes == 40 & task_data.trial_num == ii);
     if temp_inds
-        task_data.correct(task_data.trial_num == ii) = 1;
+        task_data.correct(task_data.trial_num == ii) = int8(1);
     end
 end
 

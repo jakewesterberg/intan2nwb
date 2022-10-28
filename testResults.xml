@@ -1,0 +1,13 @@
+<?xml version="1.0" encoding="UTF-8" standalone="no" ?>
+<testsuites>
+  <testsuite errors="0" failures="0" name="tests.system.AlignedSpikeTimesUtilityTest" skipped="0" tests="1" time="4.1317">
+    <testcase classname="tests.system.AlignedSpikeTimesUtilityTest" name="psthTest" time="4.1317"/>
+  </testsuite>
+  <testsuite errors="0" failures="0" name="tests.system.DynamicTableTest" skipped="0" tests="5" time="16.2702">
+    <testcase classname="tests.system.DynamicTableTest" name="testAmend" time="3.8487"/>
+    <testcase classname="tests.system.DynamicTableTest" name="testRoundTrip" time="3.3535"/>
+    <testcase classname="tests.system.DynamicTableTest" name="getRowTest" time="2.7203"/>
+    <testcase classname="tests.system.DynamicTableTest" name="getRowRoundtripTest" time="3.7155"/>
+    <testcase classname="tests.system.DynamicTableTest" name="ExpandableTableTest" time="2.6323"/>
+  </testsuite>
+</testsuites>
