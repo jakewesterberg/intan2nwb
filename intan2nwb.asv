@@ -237,9 +237,6 @@ for ii = to_proc
                     nwb.identifier filesep 'probe-' num2str(probe{probe_ctr+1}.num) ...
                     filesep 'rez2.mat'], 'file')
                 nwb = i2nSPK(pp, nwb, recdev{rd}, probe{probe_ctr+1});
-
-                nwb = i2nSPK_convolution();
-
                 ttt = toc;
 
                 if send_slack_alerts

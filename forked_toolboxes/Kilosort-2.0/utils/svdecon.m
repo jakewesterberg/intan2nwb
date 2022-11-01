@@ -20,8 +20,17 @@ end
 
 if  m <= n
     C = X*X';
-    [U,D] = eig(C);
     
+    try
+        [U,D] = eig(C);
+    catch
+        C2=gather(C);
+        [U,D] = eig(C2,eye(size(C2)));
+        U = gpuArray(U);
+        D = gpuArray(D);
+        clear C2
+    end
+
     clear C;
     
     [d,ix] = sort(abs(diag(D)),'descend');

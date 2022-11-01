@@ -23,10 +23,10 @@ pp.SCRATCH      = [userpath filesep 'scratch'];
 varStrInd = find(cellfun(@ischar,varargin));                        
 for iv = 1:length(varStrInd)
     switch varargin{varStrInd(iv)}
-        case {'DATA_SOURCE'}
-            pp.DATA_SOURCE = varargin{varStrInd(iv)+1};
-        case {'DATA_DEST'}
-            pp.DATA_DEST = varargin{varStrInd(iv)+1};
+                case {'RAW_DATA'}
+            pp.RAW_DATA = varargin{varStrInd(iv)+1};
+                    case {'RAW_DATA'}
+            pp.RAW_DATA = varargin{varStrInd(iv)+1};
         case {'RAW_DATA'}
             pp.RAW_DATA = varargin{varStrInd(iv)+1};
         case {'CAT_DATA'}
@@ -47,12 +47,8 @@ for iv = 1:length(varStrInd)
             pp.CONDA = varargin{varStrInd(iv)+1};
         case {'REPO'}
             pp.REPO = varargin{varStrInd(iv)+1};
-        case {'TBOXES'}
-            pp.TBOXES = varargin{varStrInd(iv)+1};
         case {'SCRATCH'}
             pp.SCRATCH = varargin{varStrInd(iv)+1};
-        case {'pp'}
-            pp = varargin{varStrInd(iv)+1};
     end
 end
 
