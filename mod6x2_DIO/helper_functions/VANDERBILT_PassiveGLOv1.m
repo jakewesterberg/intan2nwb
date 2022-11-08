@@ -1,4 +1,4 @@
-function task_data = taskPassiveGLOv1(codes, times)
+function task_data = VANDERBILT_PassiveGLOv1(codes, times)
 
 ii_ctr = 1;
 
@@ -68,25 +68,25 @@ for ii = 1 : numel(codes)
                 task_data.notes{ii_ctr} = temp_note;
                 task_data.event_code_type{ii_ctr} = "fixation made";
             case 20
-                task_data.orientation(ii_ctr) = condition_mat(current_trial_type(1));
+                task_data.orientation(ii_ctr) = current_trial_type(1);
                 task_data.presentation(ii_ctr) = 1;
                 task_data.sequence_type{ii_ctr} = block_mat(current_trial_seq);
                 task_data.notes{ii_ctr} = temp_note;
                 task_data.event_code_type{ii_ctr} = "presentation 1";
             case 22
-                task_data.orientation(ii_ctr) = condition_mat(current_trial_type(2));
+                task_data.orientation(ii_ctr) = current_trial_type(2);
                 task_data.presentation(ii_ctr) = 2;
                 task_data.sequence_type{ii_ctr} = block_mat(current_trial_seq);
                 task_data.notes{ii_ctr} = temp_note;
                 task_data.event_code_type{ii_ctr} = "presentation 2";
             case 24
-                task_data.orientation(ii_ctr) = condition_mat(current_trial_type(3));
+                task_data.orientation(ii_ctr) = current_trial_type(3);
                 task_data.presentation(ii_ctr) = 3;
                 task_data.sequence_type{ii_ctr} = block_mat(current_trial_seq);
                 task_data.notes{ii_ctr} = temp_note;
                 task_data.event_code_type{ii_ctr} = "presentation 3";
             case 30
-                task_data.orientation(ii_ctr) = condition_mat(current_trial_type(4));
+                task_data.orientation(ii_ctr) = current_trial_type(4);
                 task_data.presentation(ii_ctr) = 4;
                 task_data.sequence_type{ii_ctr} = block_mat(current_trial_seq);
                 task_data.notes{ii_ctr} = temp_note;

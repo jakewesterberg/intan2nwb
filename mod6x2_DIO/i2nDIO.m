@@ -14,9 +14,7 @@ intan_code_values(:,temp_ctr) = digital_data(:,intan_code_times(temp_ctr));
 previous_value = intan_code_times(temp_ctr);
 temp_ctr = temp_ctr + 1;
 for jj = 2:length(intan_code_times_unprocessed)
-    if(intan_code_times_unprocessed(jj) == previous_value + 1)
-        %Do nothing
-    else
+    if ~(intan_code_times_unprocessed(jj) == previous_value + 1)
         intan_code_times(temp_ctr) = intan_code_times_unprocessed(jj);
         intan_code_values(:,temp_ctr) = digital_data(:,intan_code_times(temp_ctr)+1);
         temp_ctr = temp_ctr + 1;

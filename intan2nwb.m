@@ -27,7 +27,7 @@ function intan2nwb(varargin)
 %% Defaults
 keepers                         = {'NWB'};
 return_to_source                = true;
-skip_completed                  = true;
+skip_completed                  = false;
 send_slack_alerts               = true; % requires SlackMatlab toolbox with appropriate tokens
 this_ident                      = []; % used to specify specific session(s) with their ident
 
@@ -237,8 +237,6 @@ for ii = to_proc
                     nwb.identifier filesep 'probe-' num2str(probe{probe_ctr+1}.num) ...
                     filesep 'rez2.mat'], 'file')
                 nwb = i2nSPK(pp, nwb, recdev{rd}, probe{probe_ctr+1});
-
-                nwb = i2nSPK_convolution();
 
                 ttt = toc;
 
