@@ -106,7 +106,7 @@ json_struct.ephys_params.ap_band_file = ...
     strrep([pp.BIN_DATA nwb.identifier filesep nwb.identifier '_probe-' num2str(probe.num) '.bin'], filesep, [filesep filesep]);
 json_struct.ephys_params.cluster_group_file_name = 'cluster_group.tsv.v2';
 json_struct.ephys_params.reorder_lfp_channels = true;
-json_struct.ephys_params.lfp_sample_rate = 1000;
+json_struct.ephys_params.lfp_sample_rate = probe.downsample_fs;
 json_struct.ephys_params.probe_type = probe.type;
 
 json_struct.ks_postprocessing_params.within_unit_overlap_window = 0.000166;
@@ -291,27 +291,23 @@ clear spike_amplitudes
 nwbExport(nwb, [pp.NWB_DATA nwb.identifier '.nwb']);
 
 %% CONVOLUTION
-try
-    conv_data = zeros(numel(unit_idents), size(nwb.acquisition.get('probe_0_lfp').electricalseries.get('probe_0_lfp_data'), 2), 'single');
-catch
-    conv_data = zeros(numel(unit_idents), ceil(max(nwb.units.spike_times_index.data(:))*1000)+1000, 'single');
-end
+conv_data = zeros(numel(unit_idents), ceil(max(nwb.units.spike_times.data(:))*probe.downsample_fs)+probe.downsample_fs, 'single');
 
 spike_times_indices = zeros(1, numel(nwb.units.spike_times.data(:)));
 for ii = 1 : numel(unit_idents)
     spike_times_indices(1:nwb.units.spike_times_index.data(ii)) = spike_times_indices(1:nwb.units.spike_times_index.data(ii)) + 1;
 end
 
-conv_data(sub2ind(size(conv_data), spike_times_indices, round(nwb.units.spike_times.data(:)*1000)))   = 1;
+conv_data(sub2ind(size(conv_data), spike_times_indices', round(nwb.units.spike_times.data(:)*probe.downsample_fs)))   = 1;
 
-Half_BW = ceil( 20 * 8 );
+Half_BW = ceil( (20*(probe.downsample_fs/1000)) * 8 );
 x = 0 : Half_BW;
 k = [ zeros( 1, Half_BW ), ...
-    ( 1 - ( exp( -( x ./ 1 ) ) ) ) .* ( exp( -( x ./ 20) ) ) ];
+    ( 1 - ( exp( -( x ./ 1 ) ) ) ) .* ( exp( -( x ./ (probe.downsample_fs/1000)) ) ) ];
 
 cnv_pre = mean(conv_data(:,1:floor(length(k)/2)),2)*ones(1,floor(length(k)/2));
 cnv_post = mean(conv_data(:,length(conv_data)-floor(length(k)/2):length(conv_data)),2)*ones(1,floor(length(k)/2));
-conv_data = conv2([ cnv_pre conv_data cnv_post ], k, 'valid') .* 1000;
+conv_data = conv2([ cnv_pre conv_data cnv_post ], k, 'valid') .* probe.downsample_fs;
 
 electrode_table_region_temp = types.hdmf_common.DynamicTableRegion( ...
     'table', types.untyped.ObjectView(nwb.general_extracellular_ephys_electrodes), ...
@@ -321,11 +317,11 @@ electrode_table_region_temp = types.hdmf_common.DynamicTableRegion( ...
 convolution_electrical_series = types.core.ElectricalSeries( ...
     'electrodes', electrode_table_region_temp, ...
     'starting_time', 0.0, ... % seconds
-    'starting_time_rate', 1000, ... % Hz
+    'starting_time_rate', probe.downsample_fs, ... % Hz
     'data', conv_data, ...
     'data_unit', 'spikes/second', ...
-    'filtering', 'Excitatory postsynaptic potential type convolution of spike rasters. kWidth=20', ...
-    'timestamps', nwb.acquisition.get('probe_0_lfp').electricalseries.get('probe_0_lfp_data').timestamps(:));
+    'filtering', 'Excitatory postsynaptic potential type convolution of spike rasters. kWidth=20ms', ...
+    'timestamps', (0:size(conv_data,2)-1)/probe.downsample_fs);
 
 suac_series = types.core.ProcessingModule('convolved_spike_train_data', convolution_electrical_series, ...
     'description', 'Single units rasters convolved using EPSP kernel');

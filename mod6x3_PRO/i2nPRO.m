@@ -28,7 +28,7 @@ for rd = 0 : num_recording_devices-1
 
     recdev{rd+1}.num = rd;
 
-    for jj = 1 : recording_info.Probe_Count
+    for jj = 1 : recording_info.Probe_Count(ii)
 
         ind_e_table = cell2table(cell(0, length(e_variables)), ...
             'VariableNames', e_variables);
@@ -39,7 +39,7 @@ for rd = 0 : num_recording_devices-1
         probe{probe_ctr+1}.num_samples = length(recdev{rd+1}.time_stamp);
 
         % Determine the downsampling
-        probe{probe_ctr+1}.downsample_fs = 1000;
+        probe{probe_ctr+1}.downsample_fs = 1250;
         probe{probe_ctr+1}.downsample_factor = recdev{rd+1}.sampling_rate/probe{probe_ctr+1}.downsample_fs;
         recdev{rd+1}.time_stamps_s = recdev{rd+1}.time_stamp / recdev{rd+1}.sampling_rate;
         recdev{rd+1}.time_stamps_s_ds = downsample(recdev{rd+1}.time_stamps_s, probe{probe_ctr+1}.downsample_factor);
@@ -65,7 +65,7 @@ for rd = 0 : num_recording_devices-1
 
         electrode_group = types.core.ElectrodeGroup( ...
             'has_lfp_data', true, ...
-            'lfp_sampling_rate', 1000, ...
+            'lfp_sampling_rate', probe{probe_ctr+1}.downsample_fs, ...
             'probe_id', probe{probe_ctr+1}.num, ...
             'description', ['electrode group for probe' alphabet(probe{probe_ctr+1}.num+1)], ...
             'location', paren(strtrim(split(recording_info.Area{ii+rd}, ',')), jj), ...
@@ -113,7 +113,7 @@ nwbExport(nwb, [pp.NWB_DATA nwb.identifier '.nwb']);
 e_ctr = 0;
 probe_ctr = 0;
 for rd = 0 : num_recording_devices-1
-    for jj = 1 : recording_info.Probe_Count
+    for jj = 1 : recording_info.Probe_Count(ii)
 
         probe{probe_ctr+1}.electrode_table_region = types.hdmf_common.DynamicTableRegion( ...
             'table', types.untyped.ObjectView(nwb.general_extracellular_ephys_electrodes), ...

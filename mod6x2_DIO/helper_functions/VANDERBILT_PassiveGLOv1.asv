@@ -145,20 +145,6 @@ end
 task_data.contrast       = repmat(0.8, numel(task_data.start_time), 1); % stimulus contrast
 task_data.drift_rate     = repmat(2, numel(task_data.start_time), 1); % temporal frequency (drift rate)  
 
-task_data.codes             = task_data.codes';
-task_data.seq_type          = task_data.seq_type';
-task_data.trial_num         = task_data.trial_num';
-task_data.presentation      = task_data.presentation';
-task_data.start_time        = task_data.start_time';
-task_data.stop_time         = task_data.stop_time';
-task_data.orientation       = task_data.orientation';
-task_data.sequence_type     = task_data.sequence_type';
-task_data.notes             = task_data.notes';
-task_data.event_code_type   = task_data.event_code_type';
-task_data.gloexp            = task_data.gloexp';
-task_data.rndctl            = task_data.rndctl';
-task_data.seqctl            = task_data.seqctl';
-
 % % all possible sequence combinations
 % seq_combos                         = [ ...
 %     go, go, go, go; ...
@@ -210,5 +196,16 @@ task_data.ilo_seq                            = logical(task_data.ilo_seq);
 task_data.gloexp                             = logical(task_data.gloexp);
 task_data.rndctl                             = logical(task_data.rndctl);
 task_data.seqctl                             = logical(task_data.seqctl);
+
+task_data.codes             = task_data.codes';
+task_data.seq_type          = task_data.seq_type';
+task_data.trial_num         = task_data.trial_num';
+task_data.presentation      = task_data.presentation';
+task_data.start_time        = task_data.start_time';
+task_data.stop_time         = task_data.stop_time';
+task_data.orientation       = task_data.orientation';
+task_data.sequence_type     = task_data.sequence_type';
+task_data.notes             = task_data.notes';
+task_data.event_code_type   = task_data.event_code_type';
 
 end

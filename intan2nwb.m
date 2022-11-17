@@ -26,9 +26,8 @@
 function intan2nwb(varargin)
 %% Defaults
 keepers                         = {'NWB'};
-return_to_source                = true;
+return_to_source                = false;
 skip_completed                  = false;
-send_slack_alerts               = true; % requires SlackMatlab toolbox with appropriate tokens
 this_ident                      = []; % used to specify specific session(s) with their ident
 
 %% pathing...can change to varargin or change function defaults for own machine
@@ -57,6 +56,13 @@ if ~exist('ID', 'var')
     ID = load(uigetfile(pwd, 'SELECT RECORDING ID FILE'));
 end
 
+%% Prepare slack
+if exist('SLACK_ID', 'var')
+    send_slack_alerts = true;
+else
+    send_slack_alerts = false;
+end
+
 %% Read recording session information
 url_name = sprintf('https://docs.google.com/spreadsheets/d/%s/gviz/tq?tqx=out:csv&sheet=%s', ID);
 recording_info = webread(url_name);
@@ -73,7 +79,12 @@ end
 
 n_procd = 0;
 %% Loop through sessions
-for ii = to_proc
+for ii = to_proc(2:end)
+    
+    % Skip files already processed if desired
+    if exist([pp.DATA_DEST '_6_NWB_DATA' filesep recording_info.Identifier{ii} '.nwb'], 'file') & skip_completed
+        continue;
+    end
 
     tic
     ttt=toc;
@@ -86,10 +97,74 @@ for ii = to_proc
                 '', ...
                 ':robot_face:');
     end
-    
-    % Skip files already processed if desired
-    if exist([pp.DATA_DEST '_6_NWB_DATA' filesep recording_info.Identifier{ii} '.nwb'], 'file') & skip_completed
-        continue;
+
+    if strcmp(recording_info.Raw_Data_Format{ii}, 'AI-NWB')
+
+        if send_slack_alerts
+            SendSlackNotification( ...
+                SLACK_ID, ...
+                [recording_info.Identifier{ii} ': [' s2HMS(ttt) '] Allen Institute NWB-raw-data identified.'], ...
+                'preprocess', ...
+                'iJakebot', ...
+                '', ...
+                ':robot_face:');
+        end
+
+        raw_data_dir = findDir(pp.RAW_DATA, recording_info.Identifier{ii});
+        if isempty(raw_data_dir)
+
+            if (exist([pp.SCRATCH '\i2n_grab_data.bat'],'file'))
+                delete([pp.SCRATCH '\i2n_grab_data.bat']);
+            end
+
+            [~, dir_name_temp] = fileparts(raw_data_dir);
+
+            % Grab data if missing
+            workers = feature('numcores');
+            fid = fopen([pp.SCRATCH '\i2n_grab_data.bat'], 'w');
+
+            fprintf(fid, '%s\n', ...
+                ['robocopy ' ...
+                raw_data_temp
+                ' ' ...
+                [pp.RAW_DATA dir_name_temp] ...
+                ' /e /j /mt:' ...
+                num2str(workers)]);
+
+            fclose('all');
+            system([pp.SCRATCH '\i2n_grab_data.bat']);
+            delete([pp.SCRATCH '\i2n_grab_data.bat']);
+            ttt = toc;
+
+            if send_slack_alerts
+                SendSlackNotification( ...
+                    SLACK_ID, ...
+                    [recording_info.Identifier{ii} ': [' s2HMS(ttt) '] Downloaded raw data from server.'], ...
+                    'preprocess', ...
+                    'iJakebot', ...
+                    '', ...
+                    ':robot_face:');
+            end
+        end
+
+        [file_name_temp, dir_name_temp] = fileparts(raw_data_dir);
+        nwb = nwbRead([pp.RAW_DATA dir_name_temp filesep dir_name_temp(1:end-6) 'AI-general.nwb']);
+
+        nwb = i2nAIC(pp, nwb, recording_info, ii);
+
+        if send_slack_alerts
+            SendSlackNotification( ...
+                SLACK_ID, ...
+                [recording_info.Identifier{ii} ': [' s2HMS(ttt) '] AI conversion complete.'], ...
+                'preprocess', ...
+                'iJakebot', ...
+                '', ...
+                ':robot_face:');
+        end
+
+        n_procd = n_procd + 1;
+        continue
+
     end
 
     % Initialize nwb file
@@ -194,7 +269,7 @@ for ii = to_proc
         end
 
         % Loop through probes to setup nwb tables
-        for jj = 1 : recording_info.Probe_Count
+        for jj = 1 : recording_info.Probe_Count(ii)
 
             % BIN DATA
             if ~exist([pp.BIN_DATA nwb.identifier filesep ...

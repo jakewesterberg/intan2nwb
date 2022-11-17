@@ -17,7 +17,7 @@ pp.CONDA        = 'C:\Users\westerja.VUDS\Anaconda3';
 pp.REPO         = 'C:\Users\westerja.VUDS\Documents\GitHub\intan2nwb\';
 pp.TBOXES       = 'C:\Users\westerja.VUDS\Documents\GitHub\';
 
-pp.SCRATCH      = [userpath filesep 'scratch'];
+pp.SCRATCH      = 'D:\scratch';
 
 % Varargin
 varStrInd = find(cellfun(@ischar,varargin));                        

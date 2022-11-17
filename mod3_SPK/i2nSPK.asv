@@ -291,18 +291,14 @@ clear spike_amplitudes
 nwbExport(nwb, [pp.NWB_DATA nwb.identifier '.nwb']);
 
 %% CONVOLUTION
-try
-    conv_data = zeros(numel(unit_idents), size(nwb.acquisition.get('probe_0_lfp').electricalseries.get('probe_0_lfp_data'), 2), 'single');
-catch
-    conv_data = zeros(numel(unit_idents), ceil(max(nwb.units.spike_times_index.data(:))*1000)+1000, 'single');
-end
+conv_data = zeros(numel(unit_idents), ceil(max(nwb.units.spike_times.data(:))*probe.downsample_fs)+probe.downsample_fs, 'single');
 
 spike_times_indices = zeros(1, numel(nwb.units.spike_times.data(:)));
 for ii = 1 : numel(unit_idents)
     spike_times_indices(1:nwb.units.spike_times_index.data(ii)) = spike_times_indices(1:nwb.units.spike_times_index.data(ii)) + 1;
 end
 
-conv_data(sub2ind(size(conv_data), spike_times_indices, round(nwb.units.spike_times.data(:)*1000)))   = 1;
+conv_data(sub2ind(size(conv_data), spike_times_indices', round(nwb.units.spike_times.data(:)*probe{probe_ctr+1}.downsample_fs)))   = 1;
 
 Half_BW = ceil( 20 * 8 );
 x = 0 : Half_BW;
@@ -325,30 +321,11 @@ convolution_electrical_series = types.core.ElectricalSeries( ...
     'data', conv_data, ...
     'data_unit', 'spikes/second', ...
     'filtering', 'Excitatory postsynaptic potential type convolution of spike rasters. kWidth=20', ...
-    'timestamps', nwb.acquisition.get('probe_0_lfp').electricalseries.get('probe_0_lfp_data').timestamps(:));
+    'timestamps', (0:size(conv_data,2)-1)/1000);
 
 suac_series = types.core.ProcessingModule('convolved_spike_train_data', convolution_electrical_series, ...
     'description', 'Single units rasters convolved using EPSP kernel');
 nwb.processing.set('convolved_spike_train', suac_series);
-
-
-
-Half_BW = ceil( 20 * 8 );
-x = 0 : Half_BW;
-k = [ zeros( 1, Half_BW ), ...
-    ( 1 - ( exp( -( x ./ 1 ) ) ) ) .* ( exp( -( x ./ 20) ) ) ];
-
-cnv_pre = mean(conv_data(:,1:floor(length(k)/2)),2)*ones(1,floor(length(k)/2));
-cnv_post = mean(conv_data(:,length(conv_data)-floor(length(k)/2):length(conv_data)),2)*ones(1,floor(length(k)/2));
-conv_data = conv2([ cnv_pre conv_data cnv_post ], k, 'valid') .* 1000;
-
-electrode_table_region_temp = types.hdmf_common.DynamicTableRegion( ...
-    'table', types.untyped.ObjectView(nwb.general_extracellular_ephys_electrodes), ...
-    'description', 'convolution peak channel references', ...
-    'data', nwb.units.vectordata.get('peak_channel_id').data(:));
-
-
-
 
 nwbExport(nwb, [pp.NWB_DATA nwb.identifier '.nwb']);
 
