@@ -307,7 +307,9 @@ k = [ zeros( 1, Half_BW ), ...
 
 cnv_pre = mean(conv_data(:,1:floor(length(k)/2)),2)*ones(1,floor(length(k)/2));
 cnv_post = mean(conv_data(:,length(conv_data)-floor(length(k)/2):length(conv_data)),2)*ones(1,floor(length(k)/2));
-conv_data = conv2([ cnv_pre conv_data cnv_post ], k, 'valid') .* probe.downsample_fs;
+for mm = 1 : size(conv_data, 1)
+    conv_data(mm,:) = conv2([ cnv_pre(mm,:) conv_data(mm,:) cnv_post(mm,:) ], k, 'valid') .* probe.downsample_fs;
+end
 
 electrode_table_region_temp = types.hdmf_common.DynamicTableRegion( ...
     'table', types.untyped.ObjectView(nwb.general_extracellular_ephys_electrodes), ...
