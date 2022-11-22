@@ -81,7 +81,7 @@ end
 
 n_procd = 0;
 %% Loop through sessions
-for ii = to_proc(2)
+for ii = to_proc(2:end)
     
     % Skip files already processed if desired
     if exist([pp.DATA_DEST '_6_NWB_DATA' filesep recording_info.Identifier{ii} '.nwb'], 'file') & skip_completed

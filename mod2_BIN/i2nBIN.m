@@ -124,7 +124,7 @@ else
     parfor ii = 1:NUM_CHANNELS
         current_fid = fopen(string(in_file_path+"\amp-" + upper(port_letter) + "-" + sprintf('%03d',ii-1) + ".dat"),'r');
         fseek(current_fid,skip_amount,'bof');
-        data_to_write_this_time(ii,:) = int16(fread(current_fid,last_data_chunk_length,'uint16') - 32768);
+        data_to_write_this_time(ii,:) = fread(current_fid,last_data_chunk_length,'int16');
         fclose(current_fid);
     end
     fwrite(writtenFileID,data_to_write_this_time,'int16');

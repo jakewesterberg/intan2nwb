@@ -8,7 +8,7 @@ function nwb = i2nCDS(pp, nwb, recdev, probe)
 % Initialize filter information
 [muae_bwb, muae_bwa] = butter(2, [500 5000]/(recdev.sampling_rate/2), 'bandpass');
 [muae_power_bwb, muae_power_bwa] = butter(4, 250/(recdev.sampling_rate/2), 'low');
-[lfp_bwb, lfp_bwa] = butter(2, [1 250]/(recdev.sampling_rate/2), 'bandpass');
+[lfp_bwb, lfp_bwa] = butter(2, [0.1 500]/(recdev.sampling_rate/2), 'bandpass');
 
 % Load the correct channel map file
 load([probe.type '.mat'], 'channel_map')
