@@ -65,7 +65,9 @@ end
 
 %% Read recording session information
 url_name = sprintf('https://docs.google.com/spreadsheets/d/%s/gviz/tq?tqx=out:csv&sheet=%s', ID);
-recording_info = webread(url_name);
+options = weboptions;
+options.ContentType = 'table';
+recording_info = webread(url_name, options);
 
 % Create default processing list
 to_proc = 1:length(unique(recording_info.Identifier));
@@ -79,7 +81,7 @@ end
 
 n_procd = 0;
 %% Loop through sessions
-for ii = to_proc(2:end)
+for ii = to_proc(2)
     
     % Skip files already processed if desired
     if exist([pp.DATA_DEST '_6_NWB_DATA' filesep recording_info.Identifier{ii} '.nwb'], 'file') & skip_completed
@@ -288,7 +290,7 @@ for ii = to_proc(2:end)
                 end
             end
 
-            %LFP AND MUA CALC
+            % LFP AND MUA CALC
             try
                 eval(['nwb.acquisition.probe_' num2str(probe{probe_ctr+1}.num) '_lfp']);
             catch

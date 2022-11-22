@@ -33,7 +33,7 @@ for rd = 0 : num_recording_devices-1
         ind_e_table = cell2table(cell(0, length(e_variables)), ...
             'VariableNames', e_variables);
 
-        probe{probe_ctr+1}.port = char(strtrim(paren(strsplit(recording_info.Probe_Port{ii+rd}, ';'), jj)));
+        probe{probe_ctr+1}.port = strtrim(paren(strsplit(recording_info.Probe_Port{ii+rd}, ','), jj));
 
         % Determine number of samples in datafiles
         probe{probe_ctr+1}.num_samples = length(recdev{rd+1}.time_stamp);
@@ -47,7 +47,8 @@ for rd = 0 : num_recording_devices-1
 
         % Determine number of channels that should be present for probe
         probe{probe_ctr+1}.num_channels = returnGSNum(recording_info.Probe_Channels, ii+rd, jj);
-        probe{probe_ctr+1}.type = char(paren(strtrim(split(recording_info.Probe_Ident{ii+rd}, ';')), jj));
+        probe{probe_ctr+1}.type = paren(strtrim(split(recording_info.Probe_Ident{ii+rd}, ',')), jj);
+        probe{probe_ctr+1}.type = probe{probe_ctr+1}.type{1};
         probe{probe_ctr+1}.num = probe_ctr;
 
         % Load the correct channel map file
@@ -55,8 +56,8 @@ for rd = 0 : num_recording_devices-1
 
         % Create device
         device = types.core.Device(...
-            'description', paren(strtrim(split(recording_info.Probe_Ident{ii+rd}, ';')), jj), ...
-            'manufacturer', paren(strtrim(split(recording_info.Probe_Manufacturer{ii+rd}, ';')), jj), ...
+            'description', paren(strtrim(split(recording_info.Probe_Ident{ii+rd}, ',')), jj), ...
+            'manufacturer', paren(strtrim(split(recording_info.Probe_Manufacturer{ii+rd}, ',')), jj), ...
             'probe_id', probe{probe_ctr+1}.num, ...
             'sampling_rate', recdev{rd+1}.sampling_rate ...
             );
@@ -67,7 +68,7 @@ for rd = 0 : num_recording_devices-1
             'lfp_sampling_rate', probe{probe_ctr+1}.downsample_fs, ...
             'probe_id', probe{probe_ctr+1}.num, ...
             'description', ['electrode group for probe' alphabet(probe{probe_ctr+1}.num+1)], ...
-            'location', paren(strtrim(split(recording_info.Area{ii+rd}, ';')), jj), ...
+            'location', paren(strtrim(split(recording_info.Area{ii+rd}, ',')), jj), ...
             'device', types.untyped.SoftLink(device) ...
             );
         nwb.general_extracellular_ephys.set(['probe' alphabet(probe{probe_ctr+1}.num+1)], electrode_group);
@@ -80,7 +81,7 @@ for rd = 0 : num_recording_devices-1
         Z = returnGSNum(recording_info.Z, ii+rd, jj);
 
         temp_imp = NaN; % add impedance data in future rev
-        temp_loc = paren(strtrim(split(recording_info.Area{ii+rd}, ';')), jj);
+        temp_loc = paren(strtrim(split(recording_info.Area{ii+rd}, ',')), jj);
         temp_filt = NaN; % Can probably grab this from the settings file eventually.
 
         for ielec = 1:probe{probe_ctr+1}.num_channels

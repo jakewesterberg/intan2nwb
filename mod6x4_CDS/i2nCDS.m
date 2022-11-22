@@ -20,7 +20,7 @@ muae = zeros(probe.num_channels, recdev.downsample_size);
 % Set computations to CPU, you are limited by RAM/VRAM at this
 % point. might as well use whatever you have more of...
 test_fid = fopen(recdev.in_file_path + "\amp-" + recdev.amplifier_channels(1).native_channel_name + ".dat");
-test_size = byteSize(double((fread(test_fid, probe.num_samples, 'uint16') - 32768) * 0.195));
+test_size = byteSize(double(fread(test_fid, probe.num_samples, 'int16')) .* 0.195);
 %workers = floor((gpuDevice().AvailableMemory) / (6*test_size));
 mem = memory;
 workers = floor((mem.MemAvailableAllArrays) / (6*test_size)); % change six to higher number if mem issues
@@ -48,7 +48,7 @@ parfor kk = 1:probe.num_channels
 
     % Setup array on GPU or in mem depending on run parameters
     %current_data            = gpuArray(double(fread(current_fid, probe.num_samples, 'uint16')  - 32768) * 0.195);
-    current_data            = double((fread(current_fid, num_samples, 'uint16')  - 32768) * 0.195);
+    current_data            = double(fread(current_fid, num_samples, 'int16')) .* 0.195;
 
     % Do data type specific filtering
     %             muae(kk,:)  = gather(downsample(filtfilt(muae_power_bwb, muae_power_bwa, ...
