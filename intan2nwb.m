@@ -27,7 +27,7 @@ function intan2nwb(varargin)
 %% Defaults
 keepers                         = {'NWB'};
 return_to_source                = false;
-skip_completed                  = false;
+skip_completed                  = true;
 this_ident                      = []; % used to specify specific session(s) with their ident
 
 %% pathing...can change to varargin or change function defaults for own machine
@@ -81,7 +81,7 @@ end
 
 n_procd = 0;
 %% Loop through sessions
-for ii = to_proc(2:end)
+for ii = to_proc(1:end)
     
     % Skip files already processed if desired
     if exist([pp.DATA_DEST '_6_NWB_DATA' filesep recording_info.Identifier{ii} '.nwb'], 'file') & skip_completed
@@ -321,7 +321,7 @@ for ii = to_proc(2:end)
                     SendSlackNotification( ...
                         SLACK_ID, ...
                         [nwb.identifier ': [' s2HMS(ttt) '] dev-' num2str(rd-1) ', Completed spike sorting/curation (~' ...
-                        num2str(sum(strcmp(nwb.units.vectordata.get('quality').data(:), 'good'))) ' good units).'], ...
+                        num2str(sum(nwb.units.vectordata.get('quality').data(:))) ' good units).'], ...
                         'preprocess', ...
                         'iJakebot', ...
                         '', ...
@@ -346,13 +346,14 @@ for ii = to_proc(2:end)
             ':robot_face:');
     end
 
+    n_procd = n_procd + 1;
+    nwbExport(nwb, [pp.NWB_DATA nwb.identifier '.nwb']);
+
     % Cleanup
     i2nCleanup(pp, keepers);
     if return_to_source
         i2nUpdateSource(pp);
     end
-    
-    n_procd = n_procd + 1;
 
 end
 disp(['SUCCESSFULLY PROCESSED ' num2str(n_procd) ' FILES.'])

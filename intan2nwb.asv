@@ -27,8 +27,7 @@ function intan2nwb(varargin)
 %% Defaults
 keepers                         = {'NWB'};
 return_to_source                = false;
-skip_completed                  = false;
-send_slack_alerts               = true; % requires SlackMatlab toolbox with appropriate tokens
+skip_completed                  = true;
 this_ident                      = []; % used to specify specific session(s) with their ident
 
 %% pathing...can change to varargin or change function defaults for own machine
@@ -57,9 +56,18 @@ if ~exist('ID', 'var')
     ID = load(uigetfile(pwd, 'SELECT RECORDING ID FILE'));
 end
 
+%% Prepare slack
+if exist('SLACK_ID', 'var')
+    send_slack_alerts = true;
+else
+    send_slack_alerts = false;
+end
+
 %% Read recording session information
 url_name = sprintf('https://docs.google.com/spreadsheets/d/%s/gviz/tq?tqx=out:csv&sheet=%s', ID);
-recording_info = webread(url_name);
+options = weboptions;
+options.ContentType = 'table';
+recording_info = webread(url_name, options);
 
 % Create default processing list
 to_proc = 1:length(unique(recording_info.Identifier));
@@ -73,7 +81,7 @@ end
 
 n_procd = 0;
 %% Loop through sessions
-for ii = to_proc
+for ii = to_proc(5:end)
     
     % Skip files already processed if desired
     if exist([pp.DATA_DEST '_6_NWB_DATA' filesep recording_info.Identifier{ii} '.nwb'], 'file') & skip_completed
@@ -263,7 +271,7 @@ for ii = to_proc
         end
 
         % Loop through probes to setup nwb tables
-        for jj = 1 : recording_info.Probe_Count
+        for jj = 1 : recording_info.Probe_Count(ii)
 
             % BIN DATA
             if ~exist([pp.BIN_DATA nwb.identifier filesep ...
@@ -282,7 +290,7 @@ for ii = to_proc
                 end
             end
 
-            %LFP AND MUA CALC
+            % LFP AND MUA CALC
             try
                 eval(['nwb.acquisition.probe_' num2str(probe{probe_ctr+1}.num) '_lfp']);
             catch
@@ -313,7 +321,7 @@ for ii = to_proc
                     SendSlackNotification( ...
                         SLACK_ID, ...
                         [nwb.identifier ': [' s2HMS(ttt) '] dev-' num2str(rd-1) ', Completed spike sorting/curation (~' ...
-                        num2str(sum(strcmp(nwb.units.vectordata.get('quality').data(:), 'good'))) ' good units).'], ...
+                        num2str(sum(nwb.units.vectordata.get('quality').data(:))) ' good units).'], ...
                         'preprocess', ...
                         'iJakebot', ...
                         '', ...
@@ -338,13 +346,14 @@ for ii = to_proc
             ':robot_face:');
     end
 
+    n_procd = n_procd + 1;
+    nwbExport(nwb, [pp.NWB_DATA nwb.identifier '.nwb']);
+
     % Cleanup
     i2nCleanup(pp, keepers);
     if return_to_source
         i2nUpdateSource(pp);
     end
-    
-    n_procd = n_procd + 1;
 
 end
 disp(['SUCCESSFULLY PROCESSED ' num2str(n_procd) ' FILES.'])

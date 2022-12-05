@@ -1,96 +1,127 @@
 function nwb = i2nAIO(pp, nwb, recdev)
 
 % in case of missing data...
-default_adc_mapping = {'eye_x', 'eye_y', 'eye_pupil'};
 
-downsample_factor = recdev.sampling_rate / 1000;
+downsample_factor = recdev.sampling_rate / 1250;
 
 if strcmp(recdev.board_adc_channels(1).custom_channel_name, "ANALOG-IN-1")
     adc_map = convertCharsToStrings(default_adc_mapping);
-    adc_map = adc_map(1:size(recdev.board_adc_data,1));
 else
     for jj = 1 : numel(recdev.board_adc_channels)
         adc_map(jj) = convertCharsToStrings(recdev.board_adc_channels(jj).custom_channel_name);
     end
 end
 
+pd_ctr = 0;
 for jj = 1 : numel(adc_map)
 
+    try
     temp_dat = [];
     temp_dat(1,:) = downsample(recdev.board_adc_data(jj, :), downsample_factor);
 
-    if strcmp(lower(adc_map(jj)), 'eye_x')
+    if strcmp(lower(adc_map(jj)), 'eye_1_x')
 
-        find_y = find(ismember(lower(adc_map), "eye_y"));
+        find_y = find(ismember(lower(adc_map), "eye_1_y"));
         temp_dat(2,:) = downsample(recdev.board_adc_data(find_y, :), downsample_factor);
 
-        find_p = find(ismember(lower(adc_map), "eye_pupil"));
+        find_p = find(ismember(lower(adc_map), "eye_1_pupil"));
         temp_pdat(1,:) = downsample(recdev.board_adc_data(find_p, :), downsample_factor);
 
         eye_position = types.core.SpatialSeries( ...
             'description', 'The position of the eye. Actual sampling rate = 500 Hz (Reported=1kHz)', ...
             'data', temp_dat, ...
-            'starting_time_rate', 1000, ... % Hz
+            'starting_time_rate', 1250, ... % Hz
             'timestamps', recdev.time_stamps_s_ds, ...
             'timestamps_unit', 'seconds' ...
             );
 
         eye_tracking = types.core.EyeTracking();
-        eye_tracking.spatialseries.set('eye_tracking', eye_position);
+        eye_tracking.spatialseries.set('eye_1_tracking_data', eye_position);
 
         pupil_diameter = types.core.TimeSeries( ...
             'description', 'Pupil diameter.', ...
             'data', temp_pdat, ...
-            'starting_time_rate', 1000, ... % Hz
+            'starting_time_rate', 1250, ... % Hz
             'data_unit', 'arbitrary units', ...
             'timestamps', recdev.time_stamps_s_ds, ...
             'timestamps_unit', 'seconds' ...
             );
 
         pupil_tracking = types.core.PupilTracking();
-        pupil_tracking.timeseries.set('pupil_diameter', pupil_diameter);
+        pupil_tracking.timeseries.set('pupil_1_diameter_data', pupil_diameter);
 
-        nwb.acquisition.set('EyeTracking', eye_tracking);
-        nwb.acquisition.set('PupilTracking', pupil_tracking);
+        nwb.acquisition.set('eye_1_tracking', eye_tracking);
+        nwb.acquisition.set('pupil_1_tracking', pupil_tracking);
+
+        clear temp_* find_*
+    end
+
+    if strcmp(lower(adc_map(jj)), 'eye_2_x')
+
+        find_y = find(ismember(lower(adc_map), "eye_2_y"));
+        temp_dat(2,:) = downsample(recdev.board_adc_data(find_y, :), downsample_factor);
+
+        find_p = find(ismember(lower(adc_map), "eye_2_pupil"));
+        temp_pdat(1,:) = downsample(recdev.board_adc_data(find_p, :), downsample_factor);
+
+        eye_position = types.core.SpatialSeries( ...
+            'description', 'The position of the eye. Actual sampling rate = 500 Hz (Reported=1kHz)', ...
+            'data', temp_dat, ...
+            'starting_time_rate', 1250, ... % Hz
+            'timestamps', recdev.time_stamps_s_ds, ...
+            'timestamps_unit', 'seconds' ...
+            );
+
+        eye_tracking = types.core.EyeTracking();
+        eye_tracking.spatialseries.set('eye_2_tracking_data', eye_position);
+
+        pupil_diameter = types.core.TimeSeries( ...
+            'description', 'Pupil diameter.', ...
+            'data', temp_pdat, ...
+            'starting_time_rate', 1250, ... % Hz
+            'data_unit', 'arbitrary units', ...
+            'timestamps', recdev.time_stamps_s_ds, ...
+            'timestamps_unit', 'seconds' ...
+            );
+
+        pupil_tracking = types.core.PupilTracking();
+        pupil_tracking.timeseries.set('pupil_2_diameter_data', pupil_diameter);
+
+        nwb.acquisition.set('eye_2_tracking', eye_tracking);
+        nwb.acquisition.set('pupil_2_tracking', pupil_tracking);
 
         clear temp_* find_*
     end
 
     if strcmp(lower(adc_map(jj)), 'photodiode')
+        pd_ctr = pd_ctr + 1;
 
-        find_y = find(ismember(lower(adc_map), "eye_y"));
-        temp_dat(2,:) = downsample(recdev.board_adc_data(find_y, :), downsample_factor);
-
-        find_p = find(ismember(lower(adc_map), "eye_pupil"));
-        temp_pdat(1,:) = downsample(recdev.board_adc_data(find_p, :), downsample_factor);
-
-        eye_position = types.core.SpatialSeries( ...
-            'description', 'The position of the eye. Actual sampling rate = 500 Hz (Reported=1kHz)', ...
+        pd_state = types.core.TimeSeries( ...
+            'description', 'photodiode electrical state in V', ...
             'data', temp_dat, ...
-            'starting_time_rate', 1000, ... % Hz
+            'data_unit', 'Volts', ...
+            'starting_time_rate', 1250, ... % Hz
             'timestamps', recdev.time_stamps_s_ds, ...
             'timestamps_unit', 'seconds' ...
             );
 
-        eye_tracking = types.core.EyeTracking();
-        eye_tracking.spatialseries.set('eye_tracking', eye_position);
+        pd_tracking = types.core.BehavioralTimeSeries();
+        pd_tracking.timeseries.set(['photodiode_' num2str(pd_ctr) '_tracking_data'], pd_state);
 
-        pupil_diameter = types.core.TimeSeries( ...
-            'description', 'Pupil diameter.', ...
-            'data', temp_pdat, ...
-            'starting_time_rate', 1000, ... % Hz
-            'data_unit', 'arbitrary units', ...
-            'timestamps', recdev.time_stamps_s_ds, ...
-            'timestamps_unit', 'seconds' ...
-            );
+        nwb.acquisition.set(['photodiode_' num2str(pd_ctr) '_tracking'], pd_tracking);
 
-        pupil_tracking = types.core.PupilTracking();
-        pupil_tracking.timeseries.set('pupil_diameter', pupil_diameter);
+        [bwb, bwa] = butter(1, 30/1250, 'low');
+        temp_data_2 = find(ischange(filtfilt(bwb, bwa, abs(temp_dat)))) / 1250;
 
-        nwb.acquisition.set('EyeTracking', eye_tracking);
-        nwb.acquisition.set('PupilTracking', pupil_tracking);
+        pd_dat_1 = types.hdmf_common.VectorData('data', temp_data_2); clear temp_data_2
 
-        clear temp_* find_*
+        trials = types.core.TimeIntervals('description', 'photodiode detected changes in seconds using ischange on mean', ...
+            'start_time', pd_dat_1, ...
+            'stop_time', pd_dat_1);
+
+        nwb.intervals.set(['photodiode_' num2str(pd_ctr) '_detected_changes'], trials); clear trials
+
+    end
     end
 end
 

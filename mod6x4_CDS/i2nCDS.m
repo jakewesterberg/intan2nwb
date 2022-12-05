@@ -106,6 +106,6 @@ muae_series = types.core.LFP(['probe_' num2str(probe.num) '_muae_data'], muae_el
 nwb.acquisition.set(['probe_' num2str(probe.num) '_muae'], muae_series);
 clear muae*
 
-nwbExport(nwb, [pp.NWB_DATA nwb.identifier '.nwb']);
+%nwbExport(nwb, [pp.NWB_DATA nwb.identifier '.nwb']);
 
 end

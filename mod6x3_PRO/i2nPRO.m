@@ -8,11 +8,12 @@ electrode_table = [];
 
 % Loop through probes to setup nwb tables
 probe_ctr = 0;
+chan_ctr = 0;
 for rd = 0 : num_recording_devices-1
 
-    in_file_path_0 = findDir(pp.RAW_DATA, datestr(recording_info.Session(ii+rd), 'yymmdd'));
+    in_file_path_0 = findDir(pp.RAW_DATA, datestr(recording_info.Session(ii), 'yymmdd'));
     in_file_path_1 = findDir(pp.RAW_DATA, ['dev-' num2str(rd)]);
-    in_file_path_2 = findDir(pp.RAW_DATA, recording_info.Subject{ii+rd});
+    in_file_path_2 = findDir(pp.RAW_DATA, recording_info.Subject{ii});
 
     match_dir_0 = ismember(in_file_path_2, in_file_path_0);
     match_dir_1 = ismember(in_file_path_2, in_file_path_1);
@@ -28,12 +29,31 @@ for rd = 0 : num_recording_devices-1
 
     recdev{rd+1}.num = rd;
 
-    for jj = 1 : recording_info.Probe_Count(ii)
+    recdev{rd+1}.local_probes = str2double(strtrim(split(recording_info.Probe_System{ii}, ';'))) == rd;
+    recdev{rd+1}.local_probes = recdev{rd+1}.local_probes(1:end-1);
+    recdev{rd+1}.local_aio = str2double(strtrim(split(recording_info.AIO_System{ii}, ';'))) == rd;
+    recdev{rd+1}.local_aio = recdev{rd+1}.local_aio(1:end-1);
+    recdev{rd+1}.local_dio = str2double(strtrim(split(recording_info.DIO_System{ii}, ';'))) == rd;
+    recdev{rd+1}.local_dio = recdev{rd+1}.local_dio(1:end-1);
+
+    recdev{rd+1}.adc_map = strtrim(split(recording_info.AIO_Channels{ii}, ';'));
+    recdev{rd+1}.adc_map = recdev{rd+1}.adc_map(1:end-1);
+    recdev{rd+1}.adc_map = recdev{rd+1}.adc_map(find(recdev{rd+1}.local_aio));
+
+    for jj = find(recdev{rd+1}.local_probes)'
 
         ind_e_table = cell2table(cell(0, length(e_variables)), ...
             'VariableNames', e_variables);
 
-        probe{probe_ctr+1}.port = char(strtrim(paren(strsplit(recording_info.Probe_Port{ii+rd}, ';'), jj)));
+        if jj == recording_info.Probe_Count(ii)
+            probe{probe_ctr+1}.last_probe = 1;
+        else
+            probe{probe_ctr+1}.last_probe = 0;
+        end
+
+        probe{probe_ctr+1}.recdev = rd;
+
+        probe{probe_ctr+1}.port = char(strtrim(paren(strsplit(recording_info.Probe_Port{ii}, ';'), jj)));
 
         % Determine number of samples in datafiles
         probe{probe_ctr+1}.num_samples = length(recdev{rd+1}.time_stamp);
@@ -46,17 +66,20 @@ for rd = 0 : num_recording_devices-1
         recdev{rd+1}.downsample_size = length(recdev{rd+1}.time_stamps_s_ds);
 
         % Determine number of channels that should be present for probe
-        probe{probe_ctr+1}.num_channels = returnGSNum(recording_info.Probe_Channels, ii+rd, jj);
-        probe{probe_ctr+1}.type = char(paren(strtrim(split(recording_info.Probe_Ident{ii+rd}, ';')), jj));
+        probe{probe_ctr+1}.num_channels = str2double(strtrim(paren(strsplit(recording_info.Probe_Channels{ii}, ';'), jj)));
+        probe{probe_ctr+1}.type = char(paren(strtrim(split(recording_info.Probe_Ident{ii}, ';')), jj));
         probe{probe_ctr+1}.num = probe_ctr;
+
+        probe{probe_ctr+1}.chan_prior = chan_ctr;
+        chan_ctr = chan_ctr + probe{probe_ctr+1}.num_channels;
 
         % Load the correct channel map file
         load([probe{probe_ctr+1}.type '.mat'], 'x', 'y', 'z')
 
         % Create device
         device = types.core.Device(...
-            'description', paren(strtrim(split(recording_info.Probe_Ident{ii+rd}, ';')), jj), ...
-            'manufacturer', paren(strtrim(split(recording_info.Probe_Manufacturer{ii+rd}, ';')), jj), ...
+            'description', paren(strtrim(split(recording_info.Probe_Ident{ii}, ';')), jj), ...
+            'manufacturer', paren(strtrim(split(recording_info.Probe_Manufacturer{ii}, ';')), jj), ...
             'probe_id', probe{probe_ctr+1}.num, ...
             'sampling_rate', recdev{rd+1}.sampling_rate ...
             );
@@ -67,7 +90,7 @@ for rd = 0 : num_recording_devices-1
             'lfp_sampling_rate', probe{probe_ctr+1}.downsample_fs, ...
             'probe_id', probe{probe_ctr+1}.num, ...
             'description', ['electrode group for probe' alphabet(probe{probe_ctr+1}.num+1)], ...
-            'location', paren(strtrim(split(recording_info.Area{ii+rd}, ';')), jj), ...
+            'location', paren(strtrim(split(recording_info.Area{ii}, ';')), jj), ...
             'device', types.untyped.SoftLink(device) ...
             );
         nwb.general_extracellular_ephys.set(['probe' alphabet(probe{probe_ctr+1}.num+1)], electrode_group);
@@ -75,12 +98,12 @@ for rd = 0 : num_recording_devices-1
         group_object_view = types.untyped.ObjectView(electrode_group);
 
         % Grab X, Y, Z position
-        X = returnGSNum(recording_info.X, ii+rd, jj);
-        Y = returnGSNum(recording_info.Y, ii+rd, jj);
-        Z = returnGSNum(recording_info.Z, ii+rd, jj);
+        X = returnGSNum(recording_info.X, ii, jj);
+        Y = returnGSNum(recording_info.Y, ii, jj);
+        Z = returnGSNum(recording_info.Z, ii, jj);
 
         temp_imp = NaN; % add impedance data in future rev
-        temp_loc = paren(strtrim(split(recording_info.Area{ii+rd}, ';')), jj);
+        temp_loc = paren(strtrim(split(recording_info.Area{ii}, ';')), jj);
         temp_filt = NaN; % Can probably grab this from the settings file eventually.
 
         for ielec = 1:probe{probe_ctr+1}.num_channels
@@ -107,22 +130,20 @@ for rd = 0 : num_recording_devices-1
 end
 
 nwb.general_extracellular_ephys_electrodes = util.table2nwb(electrode_table);
-nwbExport(nwb, [pp.NWB_DATA nwb.identifier '.nwb']);
+%nwbExport(nwb, [pp.NWB_DATA nwb.identifier '.nwb']);
 
 e_ctr = 0;
 probe_ctr = 0;
-for rd = 0 : num_recording_devices-1
-    for jj = 1 : recording_info.Probe_Count(ii)
+for jj = 1 : recording_info.Probe_Count(ii)
 
-        probe{probe_ctr+1}.electrode_table_region = types.hdmf_common.DynamicTableRegion( ...
-            'table', types.untyped.ObjectView(nwb.general_extracellular_ephys_electrodes), ...
-            'description', ['probe' alphabet(probe{probe_ctr+1}.num+1)], ...
-            'data', (0+e_ctr:probe{probe_ctr+1}.num_channels+e_ctr-1)');
+    probe{probe_ctr+1}.electrode_table_region = types.hdmf_common.DynamicTableRegion( ...
+        'table', types.untyped.ObjectView(nwb.general_extracellular_ephys_electrodes), ...
+        'description', ['probe' alphabet(probe{probe_ctr+1}.num+1)], ...
+        'data', (0+e_ctr:probe{probe_ctr+1}.num_channels+e_ctr-1)');
 
-        e_ctr = e_ctr + probe{probe_ctr+1}.num_channels;
-        probe_ctr = probe_ctr + 1;
+    e_ctr = e_ctr + probe{probe_ctr+1}.num_channels;
+    probe_ctr = probe_ctr + 1;
 
-    end
 end
 
 end

@@ -87,10 +87,15 @@ probe_files = findDir([pp.RAW_DATA dir_name_temp], 'probe');
 for kk = 1 : numel(probe_files)
     nwb_lfp = nwbRead(probe_files{kk});
     lfp_electrical_series = nwb_lfp.acquisition.get(['probe_' num2str(kk-1) '_lfp']).electricalseries.get(['probe_' num2str(kk-1) '_lfp_data']);
+    lfp_electrical_series.timestamps = interp(lfp_electrical_series.timestamps(:), 2);
+    t_lfp = [];
+    for mm = 1 : size(lfp_electrical_series.data(:,:), 1)
+        t_lfp = [t_lfp; interp(lfp_electrical_series.data(mm,:), 2)];
+    end
+    lfp_electrical_series.data = t_lfp; clear t_lfp
     lfp_series = types.core.LFP(['probe_' num2str(kk-1) '_lfp_data'], lfp_electrical_series);
     nwb.acquisition.set(['probe_' num2str(kk-1) '_lfp'], lfp_series);
 end
-
 
 % event coding
 if strcmp(nwb.general_stimulus, 'OpenScopeGlobalLocalOddball')
@@ -121,6 +126,6 @@ for jj = 1 : numel(event_data)
 end
 
 
-nwbExport(nwb, [pp.NWB_DATA nwb.identifier '.nwb']);
+%nwbExport(nwb, [pp.NWB_DATA nwb.identifier '.nwb']);
 
 end

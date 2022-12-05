@@ -232,7 +232,7 @@ colnames = {'snr';'cumulative_drift';'peak_channel_id';'quality';'local_index';'
 
 if ~isempty(nwb.units)
 
-    waveform_mean_index     = [nwb.units.vectordata.get('waveform_mean_index').data(:); waveform_mean_index' + nwb.units.vectordata.get('waveform_mean_index').data(numel(nwb.units.vectordata.get('waveform_mean_index').data))];
+    waveform_mean_index     = [nwb.units.vectordata.get('waveform_mean_index').data(:); waveform_mean_index' + nwb.units.vectordata.get('waveform_mean_index').data(end)];
     PT_ratio                = [nwb.units.vectordata.get('PT_ratio').data(:); PT_ratio];
     amplitude               = [nwb.units.vectordata.get('amplitude').data(:); amplitude];
     amplitude_cutoff        = [nwb.units.vectordata.get('amplitude_cutoff').data(:); amplitude_cutoff ];
@@ -254,7 +254,7 @@ if ~isempty(nwb.units)
     repolarization_slope    = [nwb.units.vectordata.get('repolarization_slope').data(:); repolarization_slope];
     silhouette_score        = [nwb.units.vectordata.get('silhouette_score').data(:); silhouette_score];
     snr                     = [nwb.units.vectordata.get('snr').data(:); snr];
-    spike_amplitudes_index  = [nwb.units.vectordata.get('spike_amplitudes_index').data(:); spike_amplitudes_index + nwb.units.vectordata.get('spike_amplitudes_index').data(numel(nwb.units.vectordata.get('spike_amplitudes_index').data))];
+    spike_amplitudes_index  = [nwb.units.vectordata.get('spike_amplitudes_index').data(:); spike_amplitudes_index + nwb.units.vectordata.get('spike_amplitudes_index').data(end)];
     spread                  = [nwb.units.vectordata.get('spread').data(:); spread];
     velocity_above          = [nwb.units.vectordata.get('velocity_above').data(:); velocity_above];
     velocity_below          = [nwb.units.vectordata.get('velocity_below').data(:); velocity_below];
@@ -299,7 +299,7 @@ if ~isempty(nwb.units)
     nwb.units.vectordata.set('spike_amplitudes', types.hdmf_common.VectorData('description', 'placeholder', 'data', spike_amplitudes));
 
     spike_times_vector      = [nwb.units.spike_times.data(:); spike_times_vector_2];
-    spike_times_index       = [nwb.units.spike_times_index.data(:); spike_times_index_2 + nwb.units.spike_times_index.data(numel(nwb.units.spike_times_index.data(:)))];
+    spike_times_index       = [nwb.units.spike_times_index.data(:); spike_times_index_2 + nwb.units.spike_times_index.data(end)];
     mean_wave_reshape       = [nwb.units.waveform_mean.data(:,:), mean_wave_reshape];
     spike_times_vector      = types.hdmf_common.VectorData('data', types.untyped.DataPipe('maxsize', Inf, 'data', spike_times_vector), 'description', 'spike times');
     spike_times_index       = types.hdmf_common.VectorIndex('data', types.untyped.DataPipe('maxsize', Inf, 'data', spike_times_index), 'description', 'spike inds', 'target', types.untyped.ObjectView(spike_times_vector));
@@ -383,6 +383,7 @@ if probe.last_probe
 
     spike_times_indices = abs(spike_times_indices);
     conv_data(sub2ind(size(conv_data), spike_times_indices', round(nwb.units.spike_times.data(:)*probe.downsample_fs)))   = 1;
+  % maybe ' on spike_times_indices
 
     Half_BW = ceil( (20*(probe.downsample_fs/1000)) * 8 );
     x = 0 : Half_BW;

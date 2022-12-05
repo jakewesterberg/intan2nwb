@@ -22,16 +22,14 @@ if  m <= n
     C = X*X';
     
     try
-        [U,D] = eig(C);
+        [U,D] = eig(C); clear C
     catch
-        C2=gather(C);
+        C2=gather(C); clear C
         [U,D] = eig(C2,eye(size(C2)));
         U = gpuArray(U);
         D = gpuArray(D);
         clear C2
     end
-
-    clear C;
     
     [d,ix] = sort(abs(diag(D)),'descend');
     U = U(:,ix);    
