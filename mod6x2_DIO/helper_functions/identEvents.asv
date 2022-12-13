@@ -44,10 +44,8 @@ for i = 1 : numel(trials)
 
     assigned_task(i) = codes(trials(i)+1);
     if i < numel(trials) & i > 1
-        if assigned_task(i) ~= assigned_task(i-1) & ...
-                assigned_task(i) ~= codes(trials(i+1)+1) & ...
-                assigned_task(i-1) == codes(trials(i+1)+1)
-            assigned_task(i) = assigned_task(i-1);
+        if assigned_task(i) ~= assigned_task(i-1) & assigned_task(i) ~= codes(trials(i+1)+1)
+            
         end
     end
 
@@ -86,8 +84,8 @@ else
     tasks = unique(assigned_task);
     for ii = 1:unique(assigned_task)
         event_data{ii} = VANDERBILT_BastosGeneralizedEventDecode( ...
-            trialified(assigned_task == tasks(ii)), ...
-            tasks(ii));
+            trialified(assigned_task == tasks(ii), ...
+            tasks{ii}));
     end
 
 end

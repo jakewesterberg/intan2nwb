@@ -23,11 +23,11 @@
 
 % NEED TO WRITE BETTER AMMENDMENT/RECALCULATION COMMANDS
 
-function intan2nwb(varargin)
+function intan2nwb(ID, varargin)
 %% Defaults
 keepers                         = {'NWB'};
 return_to_source                = false;
-skip_completed                  = true;
+skip_completed                  = false;
 this_ident                      = []; % used to specify specific session(s) with their ident
 
 %% pathing...can change to varargin or change function defaults for own machine
@@ -44,16 +44,9 @@ for iv = 1:length(varStrInd)
             skip_completed = varargin{varStrInd(iv)+1};
         case {'this_ident'}
             this_ident = varargin{varStrInd(iv)+1};
-        case {'ID'}
-            ID = varargin{varStrInd(iv)+1};
         case {'SLACK_ID'}
             SLACK_ID = varargin{varStrInd(iv)+1};
     end
-end
-
-%% Use UI if desired
-if ~exist('ID', 'var')
-    ID = load(uigetfile(pwd, 'SELECT RECORDING ID FILE'));
 end
 
 %% Prepare slack
@@ -65,9 +58,7 @@ end
 
 %% Read recording session information
 url_name = sprintf('https://docs.google.com/spreadsheets/d/%s/gviz/tq?tqx=out:csv&sheet=%s', ID);
-options = weboptions;
-options.ContentType = 'table';
-recording_info = webread(url_name, options);
+recording_info = webread(url_name);
 
 % Create default processing list
 to_proc = 1:length(unique(recording_info.Identifier));
@@ -81,7 +72,7 @@ end
 
 n_procd = 0;
 %% Loop through sessions
-for ii = to_proc(1:end)
+for ii = to_proc(17)
     
     % Skip files already processed if desired
     if exist([pp.DATA_DEST '_6_NWB_DATA' filesep recording_info.Identifier{ii} '.nwb'], 'file') & skip_completed
@@ -350,10 +341,10 @@ for ii = to_proc(1:end)
     nwbExport(nwb, [pp.NWB_DATA nwb.identifier '.nwb']);
 
     % Cleanup
-    i2nCleanup(pp, keepers);
-    if return_to_source
-        i2nUpdateSource(pp);
-    end
+%     i2nCleanup(pp, keepers);
+%     if return_to_source
+%         i2nUpdateSource(pp);
+%     end
 
 end
 disp(['SUCCESSFULLY PROCESSED ' num2str(n_procd) ' FILES.'])

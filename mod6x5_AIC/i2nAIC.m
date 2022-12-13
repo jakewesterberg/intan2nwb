@@ -125,7 +125,6 @@ for jj = 1 : numel(event_data)
     nwb.intervals.set(event_data{jj}.task, trials); clear trials
 end
 
-
 %nwbExport(nwb, [pp.NWB_DATA nwb.identifier '.nwb']);
 
 end

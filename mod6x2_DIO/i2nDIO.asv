@@ -88,7 +88,7 @@ for mm = 1 : numel(recdev.dio_map)
                 eval_str ');'];
 
             eval(eval_str); clear eval_str
-            nwb.intervals.set(event_data{jj}.task{1}, trials); clear trials
+            nwb.intervals.set(event_data{jj}.task, trials); clear trials
         end
 
     end
