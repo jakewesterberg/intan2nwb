@@ -127,8 +127,4 @@ task_data.seqctl                             = logical(task_data.seqctl);
 task_data.early_glo                          = task_data.gloexp; task_data.early_glo(find(task_data.rndctl,1,"first"):end) = 0;
 task_data.late_glo                           = task_data.gloexp; task_data.late_glo(1:find(task_data.rndctl,1,"first")) = 0;
 
-task_data.sequence_type(task_data.gloexp)    = 'gloexp';
-task_data.sequence_type(task_data.rndctl)    = 'rndctl';
-task_data.sequence_type(task_data.seqctl)    = 'seqctl';
-
 end

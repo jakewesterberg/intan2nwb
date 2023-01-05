@@ -1,4 +1,4 @@
-function task_data = VANDERBILT_PassiveGLOv2(task_data)
+function task_data = VANDERBILT_ActiveGLOv1(task_data)
 
 go = task_data.orientation(find(~isnan(task_data.orientation),1));
 if      go == 135;  lo = 45;
@@ -31,7 +31,12 @@ temp_seq_type = {'gloexp'};
 block_switch = 0;
 for ii = 1 : numel(trial_start)
 
-    presentations = find(contains(task_data.event_code_type(trial_start(ii):trial_end(ii)), 'task_event'));
+    presentations = find(contains(task_data.event_code_type(trial_start(ii):trial_end(ii)), 'task_event') & ...
+        (contains(task_data.event_code_type(trial_start(ii):trial_end(ii)), '2') | ...
+        contains(task_data.event_code_type(trial_start(ii):trial_end(ii)), '3') | ...
+        contains(task_data.event_code_type(trial_start(ii):trial_end(ii)), '4') | ...
+        contains(task_data.event_code_type(trial_start(ii):trial_end(ii)), '5')));
+    
     if numel(presentations) == 4
         complete_trial = 1;
         prez_seq = task_data.orientation(presentations+(trial_start(ii)-1))';
@@ -57,7 +62,7 @@ for ii = 1 : numel(trial_start)
     end
 
     task_data.sequence_type(trial_start(ii):trial_end(ii)) = ...
-                repmat({'gloexp'}, numel(trial_start(ii):trial_end(ii)), 1);
+                repmat(temp_seq_type, numel(trial_start(ii):trial_end(ii)), 1);
 
     clear presentations prez_seq complete_trial
 end
@@ -74,12 +79,14 @@ for ii = numel(trial_start) : -1 : 1
         task_data.sequence_type(trial_start(ii):end) = ...
             repmat({'seqctl'}, numel(trial_start(ii):numel(task_data.sequence_type)), 1);
 
+        break
+
     end
 end
 
 task_data.gloexp = strcmp(task_data.sequence_type, 'gloexp');
 task_data.rndctl = strcmp(task_data.sequence_type, 'rndctl');
-task_data.gloex = strcmp(task_data.sequence_type, 'seqctl');
+task_data.seqctl = strcmp(task_data.sequence_type, 'seqctl');
 
 % and code them relative to the combo matrix above
 seq_go_type                        = 1;
@@ -113,5 +120,9 @@ task_data.ilo_seq                            = logical(task_data.ilo_seq);
 task_data.gloexp                             = logical(task_data.gloexp);
 task_data.rndctl                             = logical(task_data.rndctl);
 task_data.seqctl                             = logical(task_data.seqctl);
+
+if sum(strcmp(task_data.sequence_type, 'gloexp')) < sum(strcmp(task_data.sequence_type, 'rndctl'))
+    warning('something seems to be wrong with sequence identification')
+end
 
 end

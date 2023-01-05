@@ -70,9 +70,9 @@ for i = 1 : numel(trials)
 end
 
 % fix strobe position bug
-if trialified{1}.codes(1) == 18 & trialified{1}.codes(1) == 9
+if trialified{1}.codes(1) == 18 & trialified{1}.codes(2) == 9
     trialified{1}.codes = trialified{1}.codes(2:end);
-elseif trialified{1}.codes(1) == 18 & trialified{1}.codes(1) == 18
+elseif trialified{1}.codes(1) == 18 & trialified{1}.codes(2) == 18
     trialified{1}.codes(2) = 9;
     trialified{1}.codes = trialified{1}.codes(2:end);
 elseif trialified{1}.codes(1) == 18 & (trialified{1}.codes(2) ~= 18 & trialified{1}.codes(2) ~= 9)

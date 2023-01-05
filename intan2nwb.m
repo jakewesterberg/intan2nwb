@@ -72,7 +72,7 @@ end
 
 n_procd = 0;
 %% Loop through sessions
-for ii = to_proc(17)
+for ii = to_proc(2:12)
     
     % Skip files already processed if desired
     if exist([pp.DATA_DEST '_6_NWB_DATA' filesep recording_info.Identifier{ii} '.nwb'], 'file') & skip_completed
@@ -141,9 +141,14 @@ for ii = to_proc(17)
         end
 
         [file_name_temp, dir_name_temp] = fileparts(raw_data_dir);
-        nwb = nwbRead([pp.RAW_DATA dir_name_temp filesep dir_name_temp(1:end-6) 'AI-general.nwb']);
 
-        nwb = i2nAIC(pp, nwb, recording_info, ii);
+        if exist([pp.NWB_DATA recording_info.Identifier{ii} '.nwb'], 'file')
+            delete([pp.NWB_DATA recording_info.Identifier{ii} '.nwb'])
+        end
+        copyfile([pp.RAW_DATA dir_name_temp filesep dir_name_temp(1:end-7) '.nwb'], pp.NWB_DATA)
+        nwb = nwbRead([pp.NWB_DATA recording_info.Identifier{ii} '.nwb']);
+
+        i2nAIC(pp, nwb, recording_info, ii);
 
         if send_slack_alerts
             SendSlackNotification( ...
@@ -163,7 +168,7 @@ for ii = to_proc(17)
     % Initialize nwb file
     nwb                                 = NwbFile;
     nwb.identifier                      = recording_info.Identifier{ii};
-    nwb.session_start_time              = datetime(recording_info.Session(ii));
+    nwb.session_start_time              = datetime(datestr(datenum(num2str(recording_info.Session(ii)), 'yymmdd')));
     nwb.general_experimenter            = recording_info.Investigator{ii};
     nwb.general_institution             = recording_info.Institution{ii};
     nwb.general_lab                     = recording_info.Lab{ii};
@@ -301,25 +306,25 @@ for ii = to_proc(17)
             end
 
             % SPIKE SORTING
-            if ~exist([pp.SPK_DATA nwb.identifier filesep ...
-                    nwb.identifier filesep 'probe-' num2str(probe{probe_ctr+1}.num) ...
-                    filesep 'rez2.mat'], 'file')
-                nwb = i2nSPK(pp, nwb, recdev{rd}, probe{probe_ctr+1});
-
-                ttt = toc;
-
-                if send_slack_alerts
-                    SendSlackNotification( ...
-                        SLACK_ID, ...
-                        [nwb.identifier ': [' s2HMS(ttt) '] dev-' num2str(rd-1) ', Completed spike sorting/curation (~' ...
-                        num2str(sum(nwb.units.vectordata.get('quality').data(:))) ' good units).'], ...
-                        'preprocess', ...
-                        'iJakebot', ...
-                        '', ...
-                        ':robot_face:');
-                end
-
-            end
+%             if ~exist([pp.SPK_DATA nwb.identifier filesep ...
+%                     nwb.identifier filesep 'probe-' num2str(probe{probe_ctr+1}.num) ...
+%                     filesep 'rez2.mat'], 'file')
+%                 nwb = i2nSPK(pp, nwb, recdev{rd}, probe{probe_ctr+1});
+% 
+%                 ttt = toc;
+% 
+%                 if send_slack_alerts
+%                     SendSlackNotification( ...
+%                         SLACK_ID, ...
+%                         [nwb.identifier ': [' s2HMS(ttt) '] dev-' num2str(rd-1) ', Completed spike sorting/curation (~' ...
+%                         num2str(sum(nwb.units.vectordata.get('quality').data(:))) ' good units).'], ...
+%                         'preprocess', ...
+%                         'iJakebot', ...
+%                         '', ...
+%                         ':robot_face:');
+%                 end
+% 
+%             end
 
             probe_ctr = probe_ctr + 1;
 

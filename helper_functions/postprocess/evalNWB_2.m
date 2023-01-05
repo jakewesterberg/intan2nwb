@@ -44,6 +44,7 @@ idx_session = 4;
 probe_no = 'probe_0_muae';
 
 %u_dat = common_average_reference(nwb{idx_session}.acquisition.get(probe_no).electricalseries.get([probe_no '_data']).data(:,:));
+
 u_dat = nwb{idx_session}.acquisition.get(probe_no).electricalseries.get([probe_no '_data']).data(:,:);
 for i = 1:size(u_dat,1)
     u_dat(i,:) = smooth(u_dat(i,:),50);

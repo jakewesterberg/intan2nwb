@@ -80,15 +80,15 @@ for ii = 1 : numel(codes)
         end
         switch codes(ii)
             case 10
-                task_data.orientation(ii_ctr) = -1;
-                task_data.presentation(ii_ctr) = -1;
+                task_data.orientation(ii_ctr) = NaN;
+                task_data.presentation(ii_ctr) = NaN;
                 task_data.sequence_type{ii_ctr} = block_mat(current_trial_seq);
                 task_data.notes{ii_ctr} = temp_note; 
                 task_data.event_code_type{ii_ctr} = "fix cue appearance";
                 task_data.seq_type(ii_ctr) = temp_seq_type;
             case 255
-                task_data.orientation(ii_ctr) = -1;
-                task_data.presentation(ii_ctr) = -1;
+                task_data.orientation(ii_ctr) = NaN;
+                task_data.presentation(ii_ctr) = NaN;
                 task_data.sequence_type{ii_ctr} = block_mat(current_trial_seq);
                 task_data.notes{ii_ctr} = temp_note;
                 task_data.event_code_type{ii_ctr} = "fixation made";

@@ -4,7 +4,7 @@ function rf = ALLENINSTITUTE_RFMappingv1(nwb)
 % Vanderbilt University
 % jakewesterberg@gmail.com
 
-rf.task =  'rf-mapping';
+rf.task =  'rf_mapping';
 
 % grab rf trial times
 rf.start_time               = nwb.intervals.get('create_receptive_field_mapping_presentations').start_time.data(:);

@@ -78,11 +78,14 @@ for ii = 1 : numel(trialified)
 
                 if jj > 1
                     if primary_codes(jj) == 50
-                       temp_end_code = primary_codes(jj+1);
+                        task_data.end_code(ii_ctr) = primary_codes(jj+1);
+                    else
+                        task_data.end_code(ii_ctr) = NaN;
                     end
                     if primary_codes(jj-1) == 50
                         continue
                     end
+                else
                 end
 
                 task_data.codes(ii_ctr) = primary_codes(jj);
@@ -111,7 +114,7 @@ for ii = 1 : numel(trialified)
 
         end
     end
-    task_data.end_code(itt_start:ii_ctr-1) = temp_end_code;
+    task_data.end_code(itt_start:ii_ctr) = 
 
 
     for kk = 1 : numel(stimulus_specific_codes)
@@ -181,7 +184,6 @@ for ii = 1 : numel(trialified)
 
             task_data.codes(ii_ctr) = 99 + kk;
             task_data.trial_num(ii_ctr) = ii;
-            task_data.end_code(ii_ctr) = temp_end_code;
 
             task_data.event_code_type{ii_ctr} = lower(uncell(event_info.PRIMARY_EVENT_CODE_DESCRIPTION( ...
                 find(event_info.PRIMARY_EVENT_CODE == task_data.codes(ii_ctr))),1));

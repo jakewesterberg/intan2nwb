@@ -1,20 +1,24 @@
-function nwb = i2nAIC(pp, nwb, recording_info, ii)
+function nwb2 = i2nAIC(pp, nwb, recording_info, ii)
+
+nwb2                                 = NwbFile;
 
 % reformat existing
-nwb.identifier                      = recording_info.Identifier{ii};
-nwb.general_experimenter            = recording_info.Investigator{ii};
-nwb.general_session_id              = recording_info.Identifier{ii};
-nwb.general_experiment_description  = recording_info.Experiment_Description{ii};
+nwb2.identifier                      = recording_info.Identifier{ii};
+nwb2.general_experimenter            = recording_info.Investigator{ii};
+nwb2.general_session_id              = recording_info.Identifier{ii};
+nwb2.general_experiment_description  = recording_info.Experiment_Description{ii};
+
+nwb2.general_extracellular_ephys_electrodes = nwb.general_extracellular_ephys_electrodes;
 
 % eye data
-eye_tracking = types.core.EyeTracking();
-pupil_tracking = types.core.PupilTracking();
-
-eye_tracking.spatialseries.set('eye_1_tracking_data', nwb.acquisition.get('EyeTracking').eye_tracking);
-pupil_tracking.timeseries.set('pupil_1_diameter_data', nwb.acquisition.get('EyeTracking').pupil_tracking);
-
-nwb.acquisition.set('eye_1_tracking', eye_tracking);
-nwb.acquisition.set('pupil_1_tracking', pupil_tracking);
+% eye_tracking = types.core.EyeTracking();
+% pupil_tracking = types.core.PupilTracking();
+% 
+% eye_tracking.spatialseries.set('eye_1_tracking_data', nwb.acquisition.get('EyeTracking').eye_tracking);
+% pupil_tracking.timeseries.set('pupil_1_diameter_data', nwb.acquisition.get('EyeTracking').pupil_tracking);
+% 
+% nwb.acquisition.set('eye_1_tracking', eye_tracking);
+% nwb.acquisition.set('pupil_1_tracking', pupil_tracking);
 
 % spiking additions
 isi_mean                            = nan(1, numel(nwb.units.spike_times_index.data(:)));
@@ -77,24 +81,46 @@ convolution_electrical_series = types.core.ElectricalSeries( ...
 
 suac_series = types.core.ProcessingModule('convolved_spike_train_data', convolution_electrical_series, ...
     'description', 'Single units rasters convolved using EPSP kernel');
-nwb.processing.set('convolved_spike_train', suac_series);
+nwb2.processing.set('convolved_spike_train', suac_series);
 
 % add lfp data
 raw_data_dir = findDir(pp.RAW_DATA, recording_info.Identifier{ii});
 [~, dir_name_temp] = fileparts(raw_data_dir);
-probe_files = findDir([pp.RAW_DATA dir_name_temp], 'probe');
+probe_files = findFiles([pp.RAW_DATA dir_name_temp filesep], 'probe');
 
 for kk = 1 : numel(probe_files)
+
+    nwb2.general_extracellular_ephys.set(['probe' alphabet(kk)], nwb.general_extracellular_ephys.get(['probe' alphabet(kk)]));
+
     nwb_lfp = nwbRead(probe_files{kk});
     lfp_electrical_series = nwb_lfp.acquisition.get(['probe_' num2str(kk-1) '_lfp']).electricalseries.get(['probe_' num2str(kk-1) '_lfp_data']);
-    lfp_electrical_series.timestamps = interp(lfp_electrical_series.timestamps(:), 2);
-    t_lfp = [];
-    for mm = 1 : size(lfp_electrical_series.data(:,:), 1)
-        t_lfp = [t_lfp; interp(lfp_electrical_series.data(mm,:), 2)];
-    end
-    lfp_electrical_series.data = t_lfp; clear t_lfp
+    lfp_electrical_series.timestamps = lfp_electrical_series.timestamps(:);
+
+%    lfp_electrical_series.timestamps = interp(lfp_electrical_series.timestamps(:), 2);
+
+%    lfp_series = types.core.LFP(['probe_' num2str(probe.num) '_lfp_data'], lfp_electrical_series);
+%    nwb.acquisition.set(['probe_' num2str(probe.num) '_lfp'], lfp_series);
+
+%    t_lfp = [];
+%     for mm = 1 : size(lfp_electrical_series.data(:,:), 1)
+%         t_lfp = [t_lfp; interp(lfp_electrical_series.data(mm,:), 2)];
+%     end
+%    lfp_electrical_series.data = t_lfp; clear t_lfp
+
+
+%     lfp_series = types.core.ElectricalSeries( ...
+%         'electrodes', probe.electrode_table_region,...
+%         'starting_time', 0.0, ... % seconds
+%         'starting_time_rate', probe.downsample_fs, ... % Hz
+%         'data', lfp, ...
+%         'data_unit', 'uV', ...
+%         'filtering', '4th order Butterworth 1-250 Hz', ...
+%         'timestamps', recdev.time_stamps_s_ds);
+
+    lfp_electrical_series.data = lfp_electrical_series.data(:,:);
+
     lfp_series = types.core.LFP(['probe_' num2str(kk-1) '_lfp_data'], lfp_electrical_series);
-    nwb.acquisition.set(['probe_' num2str(kk-1) '_lfp'], lfp_series);
+    nwb2.acquisition.set(['probe_' num2str(kk-1) '_lfp'], lfp_series);
 end
 
 % event coding
@@ -122,9 +148,9 @@ for jj = 1 : numel(event_data)
         eval_str ');']; ...
 
     eval(eval_str); clear eval_str
-    nwb.intervals.set(event_data{jj}.task, trials); clear trials
+    nwb2.intervals.set(event_data{jj}.task, trials); clear trials
 end
 
-%nwbExport(nwb, [pp.NWB_DATA nwb.identifier '.nwb']);
+nwbExport(nwb2, [pp.NWB_DATA nwb2.identifier '.nwb']);
 
 end
