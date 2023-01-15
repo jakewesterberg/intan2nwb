@@ -116,6 +116,7 @@ task_data.go_seqctl                          = task_data.seq_type == seq_go_type
 task_data.igo_seqctl                         = task_data.seq_type == seq_igo_type & task_data.seqctl & task_data.presentation==4; % inverse 'local oddball' presentation in sequence control [l l l l] insead of [g g g g]
 
 % Convert to logicals
+task_data.visual_stim                        = ones(numel(task_data.start_time), 1, 'logical');
 task_data.go_seq                             = logical(task_data.go_seq);
 task_data.lo_seq                             = logical(task_data.lo_seq);
 task_data.igo_seq                            = logical(task_data.igo_seq);

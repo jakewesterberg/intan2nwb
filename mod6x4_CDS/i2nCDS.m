@@ -44,7 +44,7 @@ warning('off','all')
 
 if ~isempty(gcp('nocreate'));    delete(gcp);    end
 pool1 = parpool(workers);
-parfor kk = 1:probe.num_channels
+for kk = 1:probe.num_channels
 
     % Open file and init data
     current_fid             = fopen(in_file_path + "\amp-" + pvar_amp_ch{kk} + ".dat" , 'r');

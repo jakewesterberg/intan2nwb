@@ -24,7 +24,7 @@ nwb2.general_extracellular_ephys_electrodes = nwb.general_extracellular_ephys_el
 isi_mean                            = nan(1, numel(nwb.units.spike_times_index.data(:)));
 isi_cv                              = nan(1, numel(nwb.units.spike_times_index.data(:)));
 isi_lv                              = nan(1, numel(nwb.units.spike_times_index.data(:)));
-stinds                              = [1; nwb.units.spike_times_index.data(:)];
+stinds                              = [0; nwb.units.spike_times_index.data(:)];
 unit_idents                         = 1:numel(nwb.units.spike_times_index.data(:));
 ctr_i                               = 0;
 
@@ -32,7 +32,7 @@ for kk = unit_idents
     ctr_i = ctr_i + 1;
 
     % isi measures
-    temp_isi = diff(nwb.units.spike_times.data(stinds(kk):stinds(kk+1)));
+    temp_isi = diff(nwb.units.spike_times.data(stinds(kk)+1:stinds(kk+1)));
     isi_mean(ctr_i) = mean(temp_isi);
     isi_cv(ctr_i) = std(temp_isi) / isi_mean(ctr_i);
     isi_0 = temp_isi(1:end-1);
@@ -42,33 +42,53 @@ for kk = unit_idents
     clear isi_0 isi_1 temp_isi
 end
 
-nwb.units.vectordata.set('isi_mean', types.hdmf_common.VectorData('description', 'placeholder', 'data', isi_mean));
-nwb.units.vectordata.set('isi_cv', types.hdmf_common.VectorData('description', 'placeholder', 'data', isi_cv));
-nwb.units.vectordata.set('isi_lv', types.hdmf_common.VectorData('description', 'placeholder', 'data', isi_lv));
+% nwb2.units.vectordata.set('isi_mean', types.hdmf_common.VectorData('description', 'placeholder', 'data', isi_mean));
+% nwb2.units.vectordata.set('isi_cv', types.hdmf_common.VectorData('description', 'placeholder', 'data', isi_cv));
+% nwb2.units.vectordata.set('isi_lv', types.hdmf_common.VectorData('description', 'placeholder', 'data', isi_lv));
 
 % single unit convolution
 conv_data = zeros(numel(unit_idents), ceil(max(nwb.units.spike_times.data(:))*1250)+1250, 'single');
 
-spike_times_indices = zeros(1, numel(nwb.units.spike_times.data(:)));
+spike_times_indices = zeros(1, numel(nwb.units.spike_times.data(:)))-numel(unit_idents)-1;
 for kk = 1 : numel(unit_idents)
     spike_times_indices(1:nwb.units.spike_times_index.data(kk)) = spike_times_indices(1:nwb.units.spike_times_index.data(kk)) + 1;
 end
 
-conv_data(sub2ind(size(conv_data), spike_times_indices', round(nwb.units.spike_times.data(:)*1250)))   = 1;
+spike_times_indices = abs(spike_times_indices);
+for kk = 1 : numel(unit_idents)
+    conv_data(kk, round(nwb.units.spike_times.data(find(spike_times_indices==kk))*1250))   = 1;
+end
 
-Half_BW = ceil( (20*(1250/1000)) * 8 );
-
-x = 0 : Half_BW;
-k = [ zeros( 1, Half_BW ), ...
-    ( 1 - ( exp( -( x ./ 1 ) ) ) ) .* ( exp( -( x ./ (1250/1000)) ) ) ];
-cnv_pre = mean(conv_data(:,1:floor(length(k)/2)),2)*ones(1,floor(length(k)/2));
-cnv_post = mean(conv_data(:,length(conv_data)-floor(length(k)/2):length(conv_data)),2)*ones(1,floor(length(k)/2));
-conv_data = conv2([ cnv_pre conv_data cnv_post ], k, 'valid') .* 1250;
+rasters = int16(conv_data);
 
 electrode_table_region_temp = types.hdmf_common.DynamicTableRegion( ...
     'table', types.untyped.ObjectView(nwb.general_extracellular_ephys_electrodes), ...
     'description', 'convolution peak channel references', ...
     'data', nwb.units.vectordata.get('peak_channel_id').data(:));
+
+raster_electrical_series = types.core.ElectricalSeries( ...
+    'electrodes', electrode_table_region_temp, ...
+    'starting_time', 0.0, ... % seconds
+    'starting_time_rate', 1250, ... % Hz
+    'data', rasters, ...
+    'data_unit', 'spikes', ...
+    'filtering', 'spike times at discrete times', ...
+    'timestamps', (0:size(conv_data,2)-1)/1250);
+
+raster_series = types.core.ProcessingModule('spike_train_data', raster_electrical_series, ...
+    'description', 'Spike trains in time');
+nwb2.processing.set('spike_train', raster_series);
+
+Half_BW = ceil( (20*(1250/1000)) * 8 );
+x = 0 : Half_BW;
+k = [ zeros( 1, Half_BW ), ...
+    ( 1 - ( exp( -( x ./ 1 ) ) ) ) .* ( exp( -( x ./ (1250/1000)) ) ) ];
+cnv_pre = mean(conv_data(:,1:floor(length(k)/2)),2)*ones(1,floor(length(k)/2));
+cnv_post = mean(conv_data(:,length(conv_data)-floor(length(k)/2):length(conv_data)),2)*ones(1,floor(length(k)/2));
+
+for mm = 1 : size(conv_data,1)
+    conv_data(mm,:) = conv([cnv_pre(mm,:) conv_data(mm,:) cnv_post(mm,:)], k, 'valid') .* 1250;
+end
 
 convolution_electrical_series = types.core.ElectricalSeries( ...
     'electrodes', electrode_table_region_temp, ...
@@ -88,9 +108,19 @@ raw_data_dir = findDir(pp.RAW_DATA, recording_info.Identifier{ii});
 [~, dir_name_temp] = fileparts(raw_data_dir);
 probe_files = findFiles([pp.RAW_DATA dir_name_temp filesep], 'probe');
 
+p_ctr = 1;
 for kk = 1 : numel(probe_files)
 
-    nwb2.general_extracellular_ephys.set(['probe' alphabet(kk)], nwb.general_extracellular_ephys.get(['probe' alphabet(kk)]));
+    no_luck = 1;
+    while no_luck
+        try
+            nwb2.general_extracellular_ephys.set(['probe' alphabet(kk)], nwb.general_extracellular_ephys.get(['probe' alphabet(p_ctr)]));
+            p_ctr = p_ctr + 1;
+            no_luck = 0;
+        catch
+            p_ctr = p_ctr + 1;
+        end
+    end
 
     nwb_lfp = nwbRead(probe_files{kk});
     lfp_electrical_series = nwb_lfp.acquisition.get(['probe_' num2str(kk-1) '_lfp']).electricalseries.get(['probe_' num2str(kk-1) '_lfp_data']);

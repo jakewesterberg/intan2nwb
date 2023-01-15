@@ -62,9 +62,11 @@ for i = 1 : numel(trials)
     % correct the early-days-early-event bug
     if trialified{i}.codes(2) == 102
         trialified{i}.codes = [trialified{i}.codes(1); trialified{i}.codes(3:end)];
+        trialified{i}.times = [trialified{i}.times(1); trialified{i}.times(3:end)];
     end
     if trialified{i}.codes(1) == 9 & trialified{i}.codes(2) >= 100 & trialified{i}.codes(3) == 10
         trialified{i}.codes = [trialified{i}.codes(1); trialified{i}.codes(3:end)];
+        trialified{i}.times = [trialified{i}.times(1); trialified{i}.times(3:end)];
     end
 
 end
@@ -72,23 +74,29 @@ end
 % fix strobe position bug
 if trialified{1}.codes(1) == 18 & trialified{1}.codes(2) == 9
     trialified{1}.codes = trialified{1}.codes(2:end);
-elseif trialified{1}.codes(1) == 18 & trialified{1}.codes(2) == 18
+    trialified{1}.times = trialified{1}.times(2:end);
+end
+if trialified{1}.codes(1) == 18 & trialified{1}.codes(2) == 18
     trialified{1}.codes(2) = 9;
     trialified{1}.codes = trialified{1}.codes(2:end);
-elseif trialified{1}.codes(1) == 18 & (trialified{1}.codes(2) ~= 18 & trialified{1}.codes(2) ~= 9)
+    trialified{1}.times = trialified{1}.times(2:end);
+end
+if trialified{1}.codes(1) == 18 & (trialified{1}.codes(2) ~= 18 & trialified{1}.codes(2) ~= 9)
     trialified{1}.codes(1) = 9;
+end
+if trialified{1}.codes(2) == 101 & trialified{1}.codes(3) == 10
+    trialified{1}.codes = [trialified{1}.codes(1); trialified{1}.codes(3:end)];
+    trialified{1}.times = [trialified{1}.times(1); trialified{1}.times(3:end)];
 end
 
 if isempty(tasks_completed)
     event_data{1} = VANDERBILT_PassiveGLOv1(codes, times);
 else
-
     tasks = unique(assigned_task);
     for ii = 1:unique(assigned_task)
         event_data{ii} = VANDERBILT_BastosGeneralizedEventDecode( ...
             trialified(assigned_task == tasks(ii)), ...
             tasks(ii));
     end
-
 end
 end

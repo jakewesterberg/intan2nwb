@@ -114,8 +114,73 @@ for jj = 1 : numel(adc_map)
         nwb.intervals.set(['photodiode_' num2str(pd_ctr) '_detected_changes'], trials); clear trials
 
     end
+
+    if strcmp(lower(adc_map(jj)), 'reward')
+
+        rew_state = types.core.TimeSeries( ...
+            'description', 'reward signal electrical state in V', ...
+            'data', temp_dat, ...
+            'data_unit', 'Volts', ...
+            'starting_time_rate', 1250, ... % Hz
+            'timestamps', recdev.time_stamps_s_ds, ...
+            'timestamps_unit', 'seconds' ...
+            );
+
+        rew_tracking = types.core.BehavioralTimeSeries();
+        rew_tracking.timeseries.set(['reward_' num2str(pd_ctr) '_tracking_data'], rew_state);
+
+        nwb.acquisition.set(['reward_' num2str(pd_ctr) '_tracking'], rew_tracking);
+
+        temp_data_2 = find(ischange(abs(temp_dat))) / 1250;
+        if mod(numel(temp_data_2),2) ~= 0
+            warning('reward detection may be inaccurate')
+        end
+        temp_data_3 = temp_data_2(1:2:end);
+        temp_data_4 = temp_data_2(2:2:end); clear temp_data_2
+
+        rew_dat_1 = types.hdmf_common.VectorData('data', temp_data_3, 'description', 'time in s'); clear temp_data_3
+        rew_dat_2 = types.hdmf_common.VectorData('data', temp_data_4, 'description', 'time in s'); clear temp_data_4
+
+        trials = types.core.TimeIntervals('description', 'reward detected in seconds using ischange on mean', ...
+            'start_time', rew_dat_1, ...
+            'stop_time', rew_dat_2, ...
+            'colnames', {'start_time', 'stop_time'});
+
+        nwb.intervals.set(['reward_' num2str(pd_ctr) '_detected'], trials); clear trials
+
+    end
 end
 
+%% Add saccade detection once eye data is established.
+% if any(strcmp(lower(adc_map(:)), 'eye_1_x'))
+% 
+%     otero_input = [ ...
+%         nwb.acquisition.get('eye_1_tracking').spatialseries.get('eye_1_tracking_data').timestamps(:), ...
+%         nwb.acquisition.get('eye_1_tracking').spatialseries.get('eye_1_tracking_data').data(1,:)', ...
+%         nwb.acquisition.get('eye_1_tracking').spatialseries.get('eye_1_tracking_data').data(2,:)'];
+% 
+%     if any(strcmp(lower(adc_map(:)), 'eye_2_x'))
+%         otero_input = [otero_input, ...
+%             nwb.acquisition.get('eye_2_tracking').spatialseries.get('eye_2_tracking_data').data(1,:)', ...
+%             nwb.acquisition.get('eye_2_tracking').spatialseries.get('eye_2_tracking_data').data(2,:)'];
+%     else
+%         otero_input = [otero_input, ...
+%             nan(size(otero_input,1), 1), ...
+%             nan(size(otero_input,1), 1)];
+%     end
+% 
+%     % blink detection is not implemented. note that blinks might be
+%     % saccades in instances where a trial was aborted.
+% 
+%     recording           = ClusterDetection.EyeMovRecording.Create( ...
+%         pp.SCRATCH, ...
+%         'temp_sac', ...
+%         otero_input, ...
+%         zeros(size(otero_input,1), 1), ...
+%         1250);
+% 
+%     [saccades, stats]    = recording.FindSaccades();
+% end
 %nwbExport(nwb, [pp.NWB_DATA nwb.identifier '.nwb']);
 
 end

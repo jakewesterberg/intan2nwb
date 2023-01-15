@@ -121,6 +121,16 @@ task_data.gloexp                             = logical(task_data.gloexp);
 task_data.rndctl                             = logical(task_data.rndctl);
 task_data.seqctl                             = logical(task_data.seqctl);
 
+% add response port info
+task_data.response_port_ident                = zeros(numel(task_data.presentation), 1, 'logical');
+task_data.response_port_ident( ...
+    strcmp(task_data.event_code_type, 'task_event_6') | ...
+    strcmp(task_data.event_code_type, 'task_event_7')) =  1;
+
+task_data.response_port_presentation         = zeros(numel(task_data.presentation), 1, 'logical');
+task_data.response_port_presentation( ...
+    strcmp(task_data.event_code_type, 'task_event_6')) =  1;
+
 if sum(strcmp(task_data.sequence_type, 'gloexp')) < sum(strcmp(task_data.sequence_type, 'rndctl'))
     warning('something seems to be wrong with sequence identification')
 end

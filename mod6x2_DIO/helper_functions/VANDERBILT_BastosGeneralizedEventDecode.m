@@ -13,7 +13,20 @@ for ii = 1 : numel(trialified)
     secondary_codes = trialified{ii}.codes(find(trialified{ii}.codes == 1001, 1, "first"):end-1);
     secondary_codes = [secondary_codes(1:2:end-1), secondary_codes(2:2:end)];
     stimulus_specific_codes = secondary_codes(find(secondary_codes(:,1)==2001):end,:);
+
     secondary_codes = secondary_codes(1:find(secondary_codes(:,1)==2001)-1,:);
+    if any(secondary_codes(:,1) > 2000)
+        bad_ind = find(diff(secondary_codes(:,1)) ~= 1, 1);
+        stimulus_specific_codes = [secondary_codes(bad_ind+1:end,:); stimulus_specific_codes];
+        stimulus_specific_codes(1,1) = 2001;
+        secondary_codes = secondary_codes(1:bad_ind, :); clear bad_ind
+    end
+
+    for tt = 2 : size(stimulus_specific_codes, 1)
+        if stimulus_specific_codes(tt, 1) == 2002 & stimulus_specific_codes(tt-1,1) < 2000
+            stimulus_specific_codes(tt-1,1) = 2001;
+        end
+    end
 
     stimuli = find(stimulus_specific_codes(:,1) == 2001);
     n_stimuli = numel(stimuli);
@@ -32,6 +45,10 @@ for ii = 1 : numel(trialified)
 
         if secondary_codes(jj,1) > 1000 % bug in output code
             sci = find(event_info.SECONDARY_EVENT_CODE == secondary_codes(jj,1));
+            if isempty(sci)
+                sci = find(event_info.SECONDARY_EVENT_CODE == secondary_codes(jj-1,1)+1);
+                warning('secondary code misreported. trying to resolve...')
+            end
         else
             if abs(secondary_codes(jj-1,1) - secondary_codes(jj+1,1)) == 2
                 sci = find(event_info.SECONDARY_EVENT_CODE == secondary_codes(jj-1,1)) + 1;
@@ -111,7 +128,9 @@ for ii = 1 : numel(trialified)
 
         end
     end
-    task_data.end_code(itt_start:ii_ctr-1) = temp_end_code;
+    if exist('temp_end_code', 'var')
+        task_data.end_code(itt_start:ii_ctr-1) = temp_end_code;
+    end
 
 
     for kk = 1 : numel(stimulus_specific_codes)
@@ -127,15 +146,28 @@ for ii = 1 : numel(trialified)
             if stimulus_specific_codes{kk}(mm,1) > 2000 % bug in output code
                 ssci = find(event_info.STIMULUS_SPECIFIC_EVENT_CODE == stimulus_specific_codes{kk}(mm,1));
             else
-                if abs(stimulus_specific_codes{kk}(mm-1,1) - stimulus_specific_codes{kk}(mm+1,1)) == 2
-                    ssci = find(event_info.STIMULUS_SPECIFIC_EVENT_CODE == stimulus_specific_codes{kk}(mm-1,1)) + 1;
-                else
+                try
+                    if abs(stimulus_specific_codes{kk}(mm-1,1) - stimulus_specific_codes{kk}(mm+1,1)) == 2
+                        ssci = find(event_info.STIMULUS_SPECIFIC_EVENT_CODE == stimulus_specific_codes{kk}(mm-1,1)) + 1;
+                    elseif kk > 1 | mm < numel(stimulus_specific_codes)
+                        if size(stimulus_specific_codes{kk-1}, 1) == size(stimulus_specific_codes{kk}, 1)
+                            ssci = find(event_info.STIMULUS_SPECIFIC_EVENT_CODE == stimulus_specific_codes{kk-1}(mm,1));
+                        elseif size(stimulus_specific_codes{kk+1}, 1) == size(stimulus_specific_codes{kk}, 1)
+                            ssci = find(event_info.STIMULUS_SPECIFIC_EVENT_CODE == stimulus_specific_codes{kk+1}(mm,1));
+                        end
+                    else
+                        warning('cannot parse stimulus specific event code...pairings misaligned, trying my best')
+                        continue
+                    end
+                catch
                     warning('cannot parse stimulus specific event code...pairings misaligned, trying my best')
                     continue
                 end
             end
-            sscs.(lower(event_info.STIMULUS_SPECIFIC_EVENT_CODE_DESCRIPTION{ssci})) = ...
-                stimulus_specific_codes{kk}(mm,2) * event_info.STIMULUS_SPECIFIC_EVENT_CODE_MULTIPLIER(ssci);
+            if ~isempty(ssci)
+                sscs.(lower(event_info.STIMULUS_SPECIFIC_EVENT_CODE_DESCRIPTION{ssci})) = ...
+                    stimulus_specific_codes{kk}(mm,2) * event_info.STIMULUS_SPECIFIC_EVENT_CODE_MULTIPLIER(ssci);
+            end
         end
         sscs_fields = fields(sscs);
 
@@ -181,7 +213,9 @@ for ii = 1 : numel(trialified)
 
             task_data.codes(ii_ctr) = 99 + kk;
             task_data.trial_num(ii_ctr) = ii;
-            task_data.end_code(ii_ctr) = temp_end_code;
+            if exist('temp_end_code', 'var')
+                task_data.end_code(ii_ctr) = temp_end_code;
+            end
 
             task_data.event_code_type{ii_ctr} = lower(uncell(event_info.PRIMARY_EVENT_CODE_DESCRIPTION( ...
                 find(event_info.PRIMARY_EVENT_CODE == task_data.codes(ii_ctr))),1));

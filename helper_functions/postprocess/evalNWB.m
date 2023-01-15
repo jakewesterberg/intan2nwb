@@ -10,34 +10,34 @@ for ii = 1 : numel(nwb)
 
 end
 
-lfp_nwb_idx = [];
-lfp_tbl_idx = [];
-for ii = 1 : numel(nwb)
-
-    lfp_per_nwb(ii) = size(nwb{ii}.acquisition.get('probe_0_lfp').electricalseries.get('probe_0_lfp_data').data(:,:),1); 
-    lfp_nwb_idx = [lfp_nwb_idx repmat(ii, 1, lfp_per_nwb(ii))];
-    lfp_tbl_idx = [lfp_tbl_idx 1:lfp_per_nwb(ii)];
-
-end
-
-
-u_dat = nwb{idx_session}.acquisition.get('photodiode_1_tracking').timeseries.get('photodiode_1_tracking_data').data(:);
-[bwb, bwa] = butter(2, 75/625, 'low');
-u_dat = filtfilt(bwb, bwa, u_dat);
-
-figure;
-ts = nwb{idx_session}.acquisition.get('photodiode_1_tracking').timeseries.get('photodiode_1_tracking_data').timestamps(:);
-evs = nwb{idx_session}.intervals.get('passive_glo').start_time.data(:);
-pAA = nwb{idx_session}.intervals.get('passive_glo').vectordata.get('correct').data(:)==1 & ...
-    (nwb{idx_session}.intervals.get('passive_glo').vectordata.get('orientation').data(:)==45 | ...
-    nwb{idx_session}.intervals.get('passive_glo').vectordata.get('orientation').data(:)==135);
-idxs = nearestIdx(ts, evs(pAA));
-m_dat = pullVecs(u_dat', idxs, [50 550]); 
-plot(-50:550, squeeze(baseline_correct(m_dat,1:50)), 'color', 'k') 
-hold on;
-yyaxis right
-plot(-50:550, squeeze(mean(baseline_correct(m_dat,1:50),3)), 'color', 'r', 'linewidth', 2)
-set(gca, 'xlim', [-10 150]) 
+% lfp_nwb_idx = [];
+% lfp_tbl_idx = [];
+% for ii = 1 : numel(nwb)
+% 
+%     lfp_per_nwb(ii) = size(nwb{ii}.acquisition.get('probe_0_lfp').electricalseries.get('probe_0_lfp_data').data(:,:),1); 
+%     lfp_nwb_idx = [lfp_nwb_idx repmat(ii, 1, lfp_per_nwb(ii))];
+%     lfp_tbl_idx = [lfp_tbl_idx 1:lfp_per_nwb(ii)];
+% 
+% end
+% 
+% 
+% u_dat = nwb{idx_session}.acquisition.get('photodiode_1_tracking').timeseries.get('photodiode_1_tracking_data').data(:);
+% [bwb, bwa] = butter(2, 75/625, 'low');
+% u_dat = filtfilt(bwb, bwa, u_dat);
+% 
+% figure;
+% ts = nwb{idx_session}.acquisition.get('photodiode_1_tracking').timeseries.get('photodiode_1_tracking_data').timestamps(:);
+% evs = nwb{idx_session}.intervals.get('passive_glo').start_time.data(:);
+% pAA = nwb{idx_session}.intervals.get('passive_glo').vectordata.get('correct').data(:)==1 & ...
+%     (nwb{idx_session}.intervals.get('passive_glo').vectordata.get('orientation').data(:)==45 | ...
+%     nwb{idx_session}.intervals.get('passive_glo').vectordata.get('orientation').data(:)==135);
+% idxs = nearestIdx(ts, evs(pAA));
+% m_dat = pullVecs(u_dat', idxs, [50 550]); 
+% plot(-50:550, squeeze(baseline_correct(m_dat,1:50)), 'color', 'k') 
+% hold on;
+% yyaxis right
+% plot(-50:550, squeeze(mean(baseline_correct(m_dat,1:50),3)), 'color', 'r', 'linewidth', 2)
+% set(gca, 'xlim', [-10 150]) 
 
 
 idx_session = 1;
