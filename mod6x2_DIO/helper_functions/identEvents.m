@@ -25,7 +25,7 @@ codes_plus_2 = [codes(3:end); NaN; NaN];
 tasks_completed = unique(codes(find(codes==task_ident_code & codes_plus_2==task_ident_code+1)+1))';
 
 end_codes = zeros(1, numel(codes),'logical');
-for i = 1 : numel(codes)-numel(task_trial_end_code)
+for i = 1 : numel(codes)-numel(task_trial_end_code)+1
     if sum(codes(i:i+numel(task_trial_end_code)-1) == task_trial_end_code) == numel(task_trial_end_code)
         end_codes(i) = 1;
     end
@@ -89,14 +89,10 @@ if trialified{1}.codes(2) == 101 & trialified{1}.codes(3) == 10
     trialified{1}.times = [trialified{1}.times(1); trialified{1}.times(3:end)];
 end
 
-if isempty(tasks_completed)
-    event_data{1} = VANDERBILT_PassiveGLOv1(codes, times);
-else
-    tasks = unique(assigned_task);
-    for ii = 1:unique(assigned_task)
-        event_data{ii} = VANDERBILT_BastosGeneralizedEventDecode( ...
-            trialified(assigned_task == tasks(ii)), ...
-            tasks(ii));
-    end
+tasks = unique(assigned_task);
+for ii = 1:numel(tasks)
+    event_data{ii} = VANDERBILT_BastosGeneralizedEventDecode( ...
+        trialified(assigned_task == tasks(ii)), ...
+        tasks(ii));
 end
 end

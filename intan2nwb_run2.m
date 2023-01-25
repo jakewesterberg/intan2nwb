@@ -21,7 +21,9 @@
 % 1. This version of the code requires having a google sheet with some
 % information pertaining to the recordings.
 
-function intan2nwb(ID, varargin)
+% NEED TO WRITE BETTER AMMENDMENT/RECALCULATION COMMANDS
+
+function intan2nwb_run2(ID, varargin)
 %% Defaults
 keepers                         = {'NWB'};
 return_to_source                = false;
@@ -70,7 +72,7 @@ end
 
 n_procd = 0;
 %% Loop through sessions
-for ii = to_proc(end:-1:13)
+for ii = to_proc([6]) %25:-1:13
     
     % Skip files already processed if desired
     if exist([pp.DATA_DEST '_6_NWB_DATA' filesep recording_info.Identifier{ii} '.nwb'], 'file') & skip_completed
@@ -148,7 +150,8 @@ for ii = to_proc(end:-1:13)
         copyfile(file_temp, [pp.NWB_DATA recording_info.Identifier{ii} '.nwb'])
         nwb = nwbRead([pp.NWB_DATA recording_info.Identifier{ii} '.nwb']);
 
-        i2nAIC(pp, nwb, recording_info, ii);
+        %%%%%%%%%%%%%%%%EVENTS ONLY
+        i2nAIC_events_only(pp, nwb, recording_info, ii);
 
         if send_slack_alerts
             SendSlackNotification( ...
@@ -241,7 +244,7 @@ for ii = to_proc(end:-1:13)
         end
 
         % Record analog traces
-        nwb = i2nAIO(nwb, recdev{rd});
+        nwb = i2nAIO(pp, nwb, recdev{rd});
         ttt = toc;
         if send_slack_alerts
             SendSlackNotification( ...
@@ -254,7 +257,7 @@ for ii = to_proc(end:-1:13)
         end
 
         % Digital events
-        nwb = i2nDIO(nwb, recdev{rd});
+        nwb = i2nDIO(pp, nwb, recdev{rd});
         ttt = toc;
         if send_slack_alerts
             SendSlackNotification( ...
@@ -290,7 +293,7 @@ for ii = to_proc(end:-1:13)
             try
                 eval(['nwb.acquisition.probe_' num2str(probe{probe_ctr+1}.num) '_lfp']);
             catch
-                nwb = i2nCDS(nwb, recdev{rd}, probe{probe_ctr+1});
+                nwb = i2nCDS(pp, nwb, recdev{rd}, probe{probe_ctr+1});
                 ttt = toc;
 
                 if send_slack_alerts

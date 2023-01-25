@@ -47,7 +47,7 @@ end
 % nwb2.units.vectordata.set('isi_lv', types.hdmf_common.VectorData('description', 'placeholder', 'data', isi_lv));
 
 % single unit convolution
-conv_data = zeros(numel(unit_idents), ceil(max(nwb.units.spike_times.data(:))*1250)+1250, 'single');
+conv_data = zeros(numel(unit_idents), ceil(max(nwb.units.spike_times.data(:))*1000)+1000, 'single');
 
 spike_times_indices = zeros(1, numel(nwb.units.spike_times.data(:)))-numel(unit_idents)-1;
 for kk = 1 : numel(unit_idents)
@@ -56,7 +56,7 @@ end
 
 spike_times_indices = abs(spike_times_indices);
 for kk = 1 : numel(unit_idents)
-    conv_data(kk, round(nwb.units.spike_times.data(find(spike_times_indices==kk))*1250))   = 1;
+    conv_data(kk, round(nwb.units.spike_times.data(find(spike_times_indices==kk))*1000))   = 1;
 end
 
 rasters = int16(conv_data);
@@ -69,35 +69,35 @@ electrode_table_region_temp = types.hdmf_common.DynamicTableRegion( ...
 raster_electrical_series = types.core.ElectricalSeries( ...
     'electrodes', electrode_table_region_temp, ...
     'starting_time', 0.0, ... % seconds
-    'starting_time_rate', 1250, ... % Hz
+    'starting_time_rate', 1000, ... % Hz
     'data', rasters, ...
     'data_unit', 'spikes', ...
     'filtering', 'spike times at discrete times', ...
-    'timestamps', (0:size(conv_data,2)-1)/1250);
+    'timestamps', (0:size(conv_data,2)-1)/1000);
 
 raster_series = types.core.ProcessingModule('spike_train_data', raster_electrical_series, ...
     'description', 'Spike trains in time');
 nwb2.processing.set('spike_train', raster_series);
 
-Half_BW = ceil( (20*(1250/1000)) * 8 );
+Half_BW = ceil( (20*(1000/1000)) * 8 );
 x = 0 : Half_BW;
 k = [ zeros( 1, Half_BW ), ...
-    ( 1 - ( exp( -( x ./ 1 ) ) ) ) .* ( exp( -( x ./ (1250/1000)) ) ) ];
+    ( 1 - ( exp( -( x ./ 1 ) ) ) ) .* ( exp( -( x ./ (1000/1000)) ) ) ];
 cnv_pre = mean(conv_data(:,1:floor(length(k)/2)),2)*ones(1,floor(length(k)/2));
 cnv_post = mean(conv_data(:,length(conv_data)-floor(length(k)/2):length(conv_data)),2)*ones(1,floor(length(k)/2));
 
 for mm = 1 : size(conv_data,1)
-    conv_data(mm,:) = conv([cnv_pre(mm,:) conv_data(mm,:) cnv_post(mm,:)], k, 'valid') .* 1250;
+    conv_data(mm,:) = conv([cnv_pre(mm,:) conv_data(mm,:) cnv_post(mm,:)], k, 'valid') .* 1000;
 end
 
 convolution_electrical_series = types.core.ElectricalSeries( ...
     'electrodes', electrode_table_region_temp, ...
     'starting_time', 0.0, ... % seconds
-    'starting_time_rate', 1250, ... % Hz
+    'starting_time_rate', 1000, ... % Hz
     'data', conv_data, ...
     'data_unit', 'spikes/second', ...
     'filtering', 'Excitatory postsynaptic potential type convolution of spike rasters. kWidth=20ms', ...
-    'timestamps', (0:size(conv_data,2)-1)/1250);
+    'timestamps', (0:size(conv_data,2)-1)/1000);
 
 suac_series = types.core.ProcessingModule('convolved_spike_train_data', convolution_electrical_series, ...
     'description', 'Single units rasters convolved using EPSP kernel');
@@ -125,27 +125,6 @@ for kk = 1 : numel(probe_files)
     nwb_lfp = nwbRead(probe_files{kk});
     lfp_electrical_series = nwb_lfp.acquisition.get(['probe_' num2str(kk-1) '_lfp']).electricalseries.get(['probe_' num2str(kk-1) '_lfp_data']);
     lfp_electrical_series.timestamps = lfp_electrical_series.timestamps(:);
-
-%    lfp_electrical_series.timestamps = interp(lfp_electrical_series.timestamps(:), 2);
-
-%    lfp_series = types.core.LFP(['probe_' num2str(probe.num) '_lfp_data'], lfp_electrical_series);
-%    nwb.acquisition.set(['probe_' num2str(probe.num) '_lfp'], lfp_series);
-
-%    t_lfp = [];
-%     for mm = 1 : size(lfp_electrical_series.data(:,:), 1)
-%         t_lfp = [t_lfp; interp(lfp_electrical_series.data(mm,:), 2)];
-%     end
-%    lfp_electrical_series.data = t_lfp; clear t_lfp
-
-
-%     lfp_series = types.core.ElectricalSeries( ...
-%         'electrodes', probe.electrode_table_region,...
-%         'starting_time', 0.0, ... % seconds
-%         'starting_time_rate', probe.downsample_fs, ... % Hz
-%         'data', lfp, ...
-%         'data_unit', 'uV', ...
-%         'filtering', '4th order Butterworth 1-250 Hz', ...
-%         'timestamps', recdev.time_stamps_s_ds);
 
     lfp_electrical_series.data = lfp_electrical_series.data(:,:);
 

@@ -65,7 +65,7 @@ for rd = 0 : num_recording_devices-1
             probe{probe_ctr+1}.num_samples = length(recdev{rd+1}.time_stamp);
 
             % Determine the downsampling
-            probe{probe_ctr+1}.downsample_fs = 1250;
+            probe{probe_ctr+1}.downsample_fs = 1000;
             probe{probe_ctr+1}.downsample_factor = recdev{rd+1}.sampling_rate/probe{probe_ctr+1}.downsample_fs;
             recdev{rd+1}.time_stamps_s = recdev{rd+1}.time_stamp / recdev{rd+1}.sampling_rate;
             recdev{rd+1}.time_stamps_s_ds = downsample(recdev{rd+1}.time_stamps_s, probe{probe_ctr+1}.downsample_factor);

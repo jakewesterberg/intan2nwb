@@ -10,9 +10,26 @@ for ii = 1 : numel(trialified)
     primary_codes = trialified{ii}.codes(1:find(trialified{ii}.codes == 84, 1, "first")-1);
     primary_times = trialified{ii}.times(1:find(trialified{ii}.codes == 84, 1, "first")-1);
 
-    secondary_codes = trialified{ii}.codes(find(trialified{ii}.codes == 1001, 1, "first"):end-1);
+    secondary_codes = trialified{ii}.codes(find(trialified{ii}.codes == 1001, 1, "first"):end); % made end-1 to end
+
+    if mod(numel(secondary_codes), 2)
+        if secondary_codes(end) == 18 & secondary_codes(end-1) < 2000
+            secondary_codes = secondary_codes(1:end-1);
+            secondary_times = sescondary_times(1:end-1);
+        else
+            repeat_val = find(~diff(secondary_codes));
+            try
+                secondary_codes = [secondary_codes(1:repeat_val-1); secondary_codes(repeat_val+1:end)];
+                secondary_times = [secondary_times(1:repeat_val-1); secondary_times(repeat_val+1:end)];
+            end
+        end
+    end
+
     secondary_codes = [secondary_codes(1:2:end-1), secondary_codes(2:2:end)];
     stimulus_specific_codes = secondary_codes(find(secondary_codes(:,1)==2001):end,:);
+    if any(stimulus_specific_codes(:,1) < 2000)
+        warning('stim specific decode failure')
+    end
 
     secondary_codes = secondary_codes(1:find(secondary_codes(:,1)==2001)-1,:);
     if any(secondary_codes(:,1) > 2000)
@@ -21,7 +38,7 @@ for ii = 1 : numel(trialified)
         stimulus_specific_codes(1,1) = 2001;
         secondary_codes = secondary_codes(1:bad_ind, :); clear bad_ind
     end
-
+    
     for tt = 2 : size(stimulus_specific_codes, 1)
         if stimulus_specific_codes(tt, 1) == 2002 & stimulus_specific_codes(tt-1,1) < 2000
             stimulus_specific_codes(tt-1,1) = 2001;

@@ -80,15 +80,15 @@ for ii = 1 : numel(codes)
         end
         switch codes(ii)
             case 10
-                task_data.orientation(ii_ctr) = -1;
-                task_data.presentation(ii_ctr) = -1;
+                task_data.orientation(ii_ctr) = NaN;
+                task_data.presentation(ii_ctr) = NaN;
                 task_data.sequence_type{ii_ctr} = block_mat(current_trial_seq);
                 task_data.notes{ii_ctr} = temp_note; 
                 task_data.event_code_type{ii_ctr} = "fix cue appearance";
                 task_data.seq_type(ii_ctr) = temp_seq_type;
             case 255
-                task_data.orientation(ii_ctr) = -1;
-                task_data.presentation(ii_ctr) = -1;
+                task_data.orientation(ii_ctr) = NaN;
+                task_data.presentation(ii_ctr) = NaN;
                 task_data.sequence_type{ii_ctr} = block_mat(current_trial_seq);
                 task_data.notes{ii_ctr} = temp_note;
                 task_data.event_code_type{ii_ctr} = "fixation made";
@@ -145,6 +145,20 @@ end
 task_data.contrast       = repmat(0.8, numel(task_data.start_time), 1); % stimulus contrast
 task_data.drift_rate     = repmat(2, numel(task_data.start_time), 1); % temporal frequency (drift rate)  
 
+task_data.codes             = task_data.codes';
+task_data.seq_type          = task_data.seq_type';
+task_data.trial_num         = task_data.trial_num';
+task_data.presentation      = task_data.presentation';
+task_data.start_time        = task_data.start_time';
+task_data.stop_time         = task_data.stop_time';
+task_data.orientation       = task_data.orientation';
+task_data.sequence_type     = task_data.sequence_type';
+task_data.notes             = task_data.notes';
+task_data.event_code_type   = task_data.event_code_type';
+task_data.gloexp            = task_data.gloexp';
+task_data.rndctl            = task_data.rndctl';
+task_data.seqctl            = task_data.seqctl';
+
 % % all possible sequence combinations
 % seq_combos                         = [ ...
 %     go, go, go, go; ...
@@ -187,25 +201,5 @@ task_data.ilo_rndctl                         = task_data.seq_type == seq_ilo_typ
 
 task_data.go_seqctl                          = task_data.seq_type == seq_go_type & task_data.seqctl & task_data.presentation==4; % 'global oddball' presentation in sequence control
 task_data.igo_seqctl                         = task_data.seq_type == seq_igo_type & task_data.seqctl & task_data.presentation==4; % inverse 'local oddball' presentation in sequence control [l l l l] insead of [g g g g]
-
-% Convert to logicals
-task_data.go_seq                             = logical(task_data.go_seq);
-task_data.lo_seq                             = logical(task_data.lo_seq);
-task_data.igo_seq                            = logical(task_data.igo_seq);
-task_data.ilo_seq                            = logical(task_data.ilo_seq);
-task_data.gloexp                             = logical(task_data.gloexp);
-task_data.rndctl                             = logical(task_data.rndctl);
-task_data.seqctl                             = logical(task_data.seqctl);
-
-task_data.codes             = task_data.codes';
-task_data.seq_type          = task_data.seq_type';
-task_data.trial_num         = task_data.trial_num';
-task_data.presentation      = task_data.presentation';
-task_data.start_time        = task_data.start_time';
-task_data.stop_time         = task_data.stop_time';
-task_data.orientation       = task_data.orientation';
-task_data.sequence_type     = task_data.sequence_type';
-task_data.notes             = task_data.notes';
-task_data.event_code_type   = task_data.event_code_type';
 
 end

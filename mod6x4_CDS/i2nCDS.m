@@ -1,4 +1,4 @@
-function nwb = i2nCDS(pp, nwb, recdev, probe)
+function nwb = i2nCDS(nwb, recdev, probe)
 
 % Let's change this to working on the bin files?
 
@@ -44,7 +44,7 @@ warning('off','all')
 
 if ~isempty(gcp('nocreate'));    delete(gcp);    end
 pool1 = parpool(workers);
-for kk = 1:probe.num_channels
+parfor kk = 1:probe.num_channels
 
     % Open file and init data
     current_fid             = fopen(in_file_path + "\amp-" + pvar_amp_ch{kk} + ".dat" , 'r');

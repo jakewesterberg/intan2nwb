@@ -1,4 +1,4 @@
-function nwb = i2nAIO(nwb, recdev)
+function nwb = i2nAIO(pp, nwb, recdev)
 
 downsample_factor = recdev.sampling_rate / 1000;
 
@@ -222,8 +222,8 @@ for jj = 1 : numel(adc_map)
         end_laser_stim = end_laser_stim ./ 1000;
 
         laser_type_id = {};
-        for ls = 1 : numel(frequency_ct)
-            laser_type_id{ls,1} = [num2str(frequency_ct(ls)) '_hz_pulse_train'];
+        for ls = 1 : numel(laser_frequency)
+            laser_type_id{ls} = [ '_hz_pulse_train'];
         end
 
         laser_start = types.hdmf_common.VectorData('data', start_laser_stim, 'description', 'time in s');
@@ -231,14 +231,13 @@ for jj = 1 : numel(adc_map)
 
         laser_level = types.hdmf_common.VectorData('data', double(laser_peaks_volts)', 'description', 'stim au level');
         laser_frequency = types.hdmf_common.VectorData('data', frequency_ct, 'description', 'stim sine freq');
-        laser_type = types.hdmf_common.VectorData('data', laser_type_id, 'description', 'stim label');
 
         trials = types.core.TimeIntervals('description', 'detected laser events from analog input', ...
             'start_time', laser_start, ...
             'stop_time', laser_stop, ...
             'level', laser_level, ...
             'frequency', laser_frequency, ...
-            'type', laser_type, ...
+            'type', 
             'colnames', {'start_time', 'stop_time', 'level', 'frequency'});
 
         nwb.intervals.set(['laser_' num2str(rew_ctr) '_empirical_decode'], trials); clear trials

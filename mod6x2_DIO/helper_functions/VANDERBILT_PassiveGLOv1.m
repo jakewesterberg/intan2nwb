@@ -133,12 +133,12 @@ for ii = 1 : numel(codes)
     end
 end
 
-task_data.correct = zeros(numel(task_data.codes), 1, 'int8');
+task_data.correct = zeros(numel(task_data.codes), 1);
 u_trials = unique(task_data.trial_num);
 for ii = u_trials
     temp_inds = sum(task_data.codes == 40 & task_data.trial_num == ii);
     if temp_inds
-        task_data.correct(task_data.trial_num == ii) = int8(1);
+        task_data.correct(task_data.trial_num == ii) = 1;
     end
 end
 
@@ -185,30 +185,21 @@ seq_ilo_type                       = 15;
 seq_igo_type                       = 16;
 
 % identify useful sequences
-task_data.go_seq                             = task_data.seq_type == seq_go_type;
-task_data.lo_seq                             = task_data.seq_type == seq_lo_type;
-task_data.igo_seq                            = task_data.seq_type == seq_igo_type;
-task_data.ilo_seq                            = task_data.seq_type == seq_ilo_type; 
+task_data.go_seq                             = double(task_data.seq_type == seq_go_type);
+task_data.lo_seq                             = double(task_data.seq_type == seq_lo_type);
+task_data.igo_seq                            = double(task_data.seq_type == seq_igo_type);
+task_data.ilo_seq                            = double(task_data.seq_type == seq_ilo_type); 
 
 % predetermine some useful combinations
-task_data.go_gloexp                          = task_data.seq_type == seq_go_type & task_data.gloexp & task_data.presentation==4; % global oddball presentations
-task_data.lo_gloexp                          = task_data.seq_type == seq_lo_type & task_data.gloexp & task_data.presentation==4; % local oddball presentations
+task_data.go_gloexp                          = double(task_data.seq_type == seq_go_type & task_data.gloexp & task_data.presentation==4); % global oddball presentations
+task_data.lo_gloexp                          = double(task_data.seq_type == seq_lo_type & task_data.gloexp & task_data.presentation==4); % local oddball presentations
 
-task_data.go_rndctl                          = task_data.seq_type == seq_go_type & task_data.rndctl & task_data.presentation==4; % 'global oddball' presentation in random control
-task_data.lo_rndctl                          = task_data.seq_type == seq_lo_type & task_data.rndctl & task_data.presentation==4; % 'local oddball' presentation in random control
-task_data.igo_rndctl                         = task_data.seq_type == seq_igo_type & task_data.rndctl & task_data.presentation==4; % inverse 'global oddball' presentation in random control [l l l g] insead of [g g g l]
-task_data.ilo_rndctl                         = task_data.seq_type == seq_ilo_type & task_data.rndctl & task_data.presentation==4; % inverse 'local oddball' presentation in random control [l l l l] insead of [g g g g]
+task_data.go_rndctl                          = double(task_data.seq_type == seq_go_type & task_data.rndctl & task_data.presentation==4); % 'global oddball' presentation in random control
+task_data.lo_rndctl                          = double(task_data.seq_type == seq_lo_type & task_data.rndctl & task_data.presentation==4); % 'local oddball' presentation in random control
+task_data.igo_rndctl                         = double(task_data.seq_type == seq_igo_type & task_data.rndctl & task_data.presentation==4); % inverse 'global oddball' presentation in random control [l l l g] insead of [g g g l]
+task_data.ilo_rndctl                         = double(task_data.seq_type == seq_ilo_type & task_data.rndctl & task_data.presentation==4); % inverse 'local oddball' presentation in random control [l l l l] insead of [g g g g]
 
-task_data.go_seqctl                          = task_data.seq_type == seq_go_type & task_data.seqctl & task_data.presentation==4; % 'global oddball' presentation in sequence control
-task_data.igo_seqctl                         = task_data.seq_type == seq_igo_type & task_data.seqctl & task_data.presentation==4; % inverse 'local oddball' presentation in sequence control [l l l l] insead of [g g g g]
-
-% Convert to logicals
-task_data.go_seq                             = logical(task_data.go_seq);
-task_data.lo_seq                             = logical(task_data.lo_seq);
-task_data.igo_seq                            = logical(task_data.igo_seq);
-task_data.ilo_seq                            = logical(task_data.ilo_seq);
-task_data.gloexp                             = logical(task_data.gloexp);
-task_data.rndctl                             = logical(task_data.rndctl);
-task_data.seqctl                             = logical(task_data.seqctl);
+task_data.go_seqctl                          = double(task_data.seq_type == seq_go_type & task_data.seqctl & task_data.presentation==4); % 'global oddball' presentation in sequence control
+task_data.igo_seqctl                         = double(task_data.seq_type == seq_igo_type & task_data.seqctl & task_data.presentation==4); % inverse 'local oddball' presentation in sequence control [l l l l] insead of [g g g g]
 
 end

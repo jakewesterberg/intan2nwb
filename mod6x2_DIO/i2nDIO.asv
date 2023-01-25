@@ -1,4 +1,4 @@
-function nwb = i2nDIO(nwb, recdev)
+function nwb = i2nDIO(pp, nwb, recdev)
 
 for mm = 1 : numel(recdev.dio_map)
     if strcmp(recdev.dio_map{mm}.description, 'EVT')
@@ -12,7 +12,7 @@ for mm = 1 : numel(recdev.dio_map)
             % Strobe-bit-less digital events that were used for a short
             % period of time. They seem to produce some inaccurate values
             % on decode...
-
+            
             intan_code_times_unprocessed = find(sum(digital_ordered) > 0);
             intan_code_times = nan(length(intan_code_times_unprocessed),1);
             intan_code_values = nan(numel(recdev.dio_map{mm}.map),length(intan_code_times_unprocessed));
