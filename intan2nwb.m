@@ -22,7 +22,7 @@
 % information pertaining to the recordings.
 
 function intan2nwb(ID, varargin)
-%% Defaults
+%% Defaults - need to ammend
 keepers                         = {'NWB'};
 return_to_source                = false;
 skip_completed                  = false;
