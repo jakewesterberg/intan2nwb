@@ -34,7 +34,6 @@ for mm = 1 : numel(recdev.dio_map)
             intan_code_times = intan_code_times(1:temp_ctr-1) ./ recdev.sampling_rate;
             intan_code_values = intan_code_values(:,1:temp_ctr-1);
             intan_code_values = bit2int(flip(intan_code_values),numel(recdev.dio_map{mm}.map))';
-            intan_code_times = intan_code_times / recdev.sampling_rate;
 
             temp_data = VANDERBILT_PassiveGLOv1(intan_code_values, intan_code_times);
             event_data = {};

@@ -137,6 +137,17 @@ for jj = 1 : numel(adc_map)
         temp_data_2 = find(ischange(abs(temp_dat))) / 1000;
         if mod(numel(temp_data_2),2) ~= 0
             warning('reward detection may be inaccurate')
+            threshold_val = 1;
+            inacc_size = size(temp_data_2, 2);
+            while size(temp_data_2) ~= inacc_size-1
+                if size(temp_data_2) <= inacc_size-2
+                    threshold_val = threshold_val-0.0001;
+                    temp_data_2 = find(ischange(abs(temp_dat), 'Threshold', threshold_val)) / 1000;
+                else
+                    threshold_val = threshold_val+0.0005;
+                    temp_data_2 = find(ischange(abs(temp_dat), 'Threshold', threshold_val)) / 1000;
+                end
+            end
         end
         temp_data_3 = temp_data_2(1:2:end);
         temp_data_4 = temp_data_2(2:2:end); clear temp_data_2

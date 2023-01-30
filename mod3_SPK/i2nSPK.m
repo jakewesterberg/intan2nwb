@@ -152,6 +152,7 @@ if ~exist([spk_file_path_itt filesep 'rez2.mat'], 'file') | respike_sort
     fprintf(fid, '%s\n', 'call %CONDAPATH%\Scripts\activate.bat %ENVPATH%');
     fprintf(fid, '%s\n', 'set GIT_PYTHON_REFRESH=quiet');
     fprintf(fid, '%s\n', 'set PYTHONIOENCODING=utf-8');
+    fprintf(fid, '%s\n', pp.REPO(1:2));
     fprintf(fid, '%s\n', ['cd ' pp.REPO 'forked_toolboxes\ecephys_spike_sorting']);
     fprintf(fid, '%s\n', ['python -m ecephys_spike_sorting.modules.kilosort_postprocessing --input_json ' ...
         spk_file_path_itt 'ecephys_spike_sorting_input.json --output_json ' spk_file_path_itt 'ecephys_spike_sorting_kspp_output.json']);

@@ -70,7 +70,7 @@ end
 
 n_procd = 0;
 %% Loop through sessions
-for ii = to_proc(end:-1:13)
+for ii = to_proc([37 36 34])
     
     % Skip files already processed if desired
     if exist([pp.DATA_DEST '_6_NWB_DATA' filesep recording_info.Identifier{ii} '.nwb'], 'file') & skip_completed
@@ -306,9 +306,7 @@ for ii = to_proc(end:-1:13)
             end
 
             % SPIKE SORTING
-            if ~exist([pp.SPK_DATA nwb.identifier filesep ...
-                    nwb.identifier filesep 'probe-' num2str(probe{probe_ctr+1}.num) ...
-                    filesep 'rez2.mat'], 'file')
+            try
                 nwb = i2nSPK(pp, nwb, recdev{rd}, probe{probe_ctr+1});
 
                 ttt = toc;
@@ -323,7 +321,8 @@ for ii = to_proc(end:-1:13)
                         '', ...
                         ':robot_face:');
                 end
-
+            catch
+                warning('KS DIDNT PAN OUT!!!!!!')
             end
 
             probe_ctr = probe_ctr + 1;
