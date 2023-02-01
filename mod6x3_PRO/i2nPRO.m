@@ -104,9 +104,21 @@ for rd = 0 : num_recording_devices-1
             group_object_view = types.untyped.ObjectView(electrode_group);
 
             % Grab X, Y, Z position
-            X = returnGSNum(recording_info.X, ii, jj);
-            Y = returnGSNum(recording_info.Y, ii, jj);
-            Z = returnGSNum(recording_info.Z, ii, jj);
+            try
+                X = returnGSNum(recording_info.X, ii, jj);
+            catch
+                X = NaN;
+            end
+            try
+                Y = returnGSNum(recording_info.Y, ii, jj);
+            catch
+                Y = NaN;
+            end
+            try
+                Z = returnGSNum(recording_info.Z, ii, jj);
+            catch
+                Z = NaN;
+            end
 
             temp_imp = NaN; % add impedance data in future rev
             temp_loc = paren(strtrim(split(recording_info.Area{ii}, ';')), jj);

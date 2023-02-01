@@ -70,7 +70,7 @@ end
 
 n_procd = 0;
 %% Loop through sessions
-for ii = to_proc(1:16)
+for ii = to_proc(17:end)
     
     % Skip files already processed if desired
     if exist([pp.DATA_DEST '_6_NWB_DATA' filesep recording_info.Identifier{ii} '.nwb'], 'file') & skip_completed
@@ -147,20 +147,7 @@ for ii = to_proc(1:16)
     nwb.general_experiment_description  = recording_info.Experiment_Description{ii};
 
     num_recording_devices = sum(strcmp(recording_info.Identifier, recording_info.Identifier{ii}));
-    
-    [nwb, recdev, probe] = i2nPRO(pp, nwb, recording_info, ii, num_recording_devices);
-    ttt=toc;
-    if send_slack_alerts
-        SendSlackNotification( ...
-                SLACK_ID, ...
-                [nwb.identifier ': [' s2HMS(ttt) '] NWB initialization complete.'], ...
-                'preprocess', ...
-                'iJakebot', ...
-                '', ...
-                ':robot_face:');
-    end
-    
-    probe_ctr = 0;
+
     for rd = 1 : num_recording_devices
 
         % RAW DATA
@@ -210,6 +197,22 @@ for ii = to_proc(1:16)
             end
 
         end
+    end
+
+    [nwb, recdev, probe] = i2nPRO(pp, nwb, recording_info, ii, num_recording_devices);
+    ttt=toc;
+    if send_slack_alerts
+        SendSlackNotification( ...
+                SLACK_ID, ...
+                [nwb.identifier ': [' s2HMS(ttt) '] NWB initialization complete.'], ...
+                'preprocess', ...
+                'iJakebot', ...
+                '', ...
+                ':robot_face:');
+    end
+    
+    probe_ctr = 0;
+    for rd = 1 : num_recording_devices
 
         % Record analog traces
         nwb = i2nAIO(nwb, recdev{rd});
@@ -316,10 +319,8 @@ for ii = to_proc(1:16)
     nwbExport(nwb, [pp.NWB_DATA nwb.identifier '.nwb']);
 
     % Cleanup
-%     i2nCleanup(pp, keepers);
-%     if return_to_source
-%         i2nUpdateSource(pp);
-%     end
+    i2nCleanup(pp, keepers);
+
 
 end
 disp(['SUCCESSFULLY PROCESSED ' num2str(n_procd) ' FILES.'])
