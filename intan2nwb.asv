@@ -109,17 +109,15 @@ for ii = to_proc(1:16)
             '+sess_' num2str(recording_info.Session(ii)) ...
             '_ecephys.nwb'];
 
-        fpath = fileparts(raw_data_dir);
-
         if ~exist(raw_data_dir, 'file')
             warning('raw allen data not detected.')
             continue
         end
 
-        copyfile(raw_data_dir, [pp.NWB_DATA recording_info.Identifier{ii} '.nwb'])
+        copyfile(file_temp, [pp.NWB_DATA recording_info.Identifier{ii} '.nwb'])
         nwb = nwbRead([pp.NWB_DATA recording_info.Identifier{ii} '.nwb']);
 
-        i2nAIC(pp, nwb, recording_info, ii, fpath);
+        i2nAIC(pp, nwb, recording_info, ii);
 
         if send_slack_alerts
             SendSlackNotification( ...

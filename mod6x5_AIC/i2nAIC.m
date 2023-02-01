@@ -1,4 +1,4 @@
-function nwb2 = i2nAIC(pp, nwb, recording_info, ii)
+function nwb2 = i2nAIC(pp, nwb, recording_info, ii, floc)
 
 nwb2                                 = NwbFile;
 
@@ -104,10 +104,7 @@ suac_series = types.core.ProcessingModule('convolved_spike_train_data', convolut
 nwb2.processing.set('convolved_spike_train', suac_series);
 
 % add lfp data
-raw_data_dir = findDir(pp.RAW_DATA, recording_info.Identifier{ii});
-[~, dir_name_temp] = fileparts(raw_data_dir);
-probe_files = findFiles([pp.RAW_DATA dir_name_temp filesep], 'probe');
-
+probe_files = findFiles([floc filesep], 'probe');
 p_ctr = 1;
 for kk = 1 : numel(probe_files)
 

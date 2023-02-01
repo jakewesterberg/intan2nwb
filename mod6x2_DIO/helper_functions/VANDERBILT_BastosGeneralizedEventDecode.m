@@ -285,6 +285,7 @@ if exist('task_input', 'var')
     end
     if strcmp(task_input, 'passive_glo') & any(contains(task_data.event_code_type, 'event_7'))
         task_input = 'active_glo';
+        task_data.task(:) = {'active_glo'};
     end
     switch task_input
         case 'passive_glo'
