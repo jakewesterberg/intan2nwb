@@ -41,6 +41,16 @@ for mm = 1 : numel(recdev.dio_map)
 
         else
 
+            % Assumes strobe bit is first bit and checks to see if it was
+            % flipped
+            strobe_check_win = 60;
+            strobe_dir = ones(1, size(digital_ordered, 2));
+            strobe_local_sum = movsum(digital_ordered(1,:), recdev.sampling_rate*strobe_check_win); 
+            strobe_dir(strobe_local_sum > (0.5 * strobe_check_win * recdev.sampling_rate)) = 0;
+            strobe_dir(1:round(recdev.sampling_rate * 0.5 * strobe_check_win)) = strobe_dir(round(recdev.sampling_rate * 0.5 * strobe_check_win));
+            strobe_dir(end-round(recdev.sampling_rate * 0.5 * strobe_check_win):end) = strobe_dir(end-round(recdev.sampling_rate * 0.5 * strobe_check_win));
+            digital_ordered(1, ~strobe_dir) = ~digital_ordered(1, ~strobe_dir);
+
             digital_ordered = ...
                 bit2int(flip(digital_ordered), numel(recdev.dio_map{mm}.map))';
 
@@ -49,7 +59,29 @@ for mm = 1 : numel(recdev.dio_map)
             intan_code_values = digital_ordered(intan_code_times);
 
             intan_code_times = intan_code_times / recdev.sampling_rate;
-            event_data = identEvents(intan_code_values, intan_code_times);
+
+            try
+                event_data = identEvents(intan_code_values, intan_code_times);
+            catch
+                disp('!!!!!COULD NOT DECODE EVENTS. CREATING PLACEHOLDER WITH DATA IN NWB FILE!!!!!')
+                event_data{1}.task = 'UNDECODABLE_PRESUMED_CODES';
+                event_data{1}.codes = intan_code_values;
+                event_data{1}.start_time = intan_code_times;
+                event_data{1}.stop_time = intan_code_times;
+
+                digi_state = types.core.TimeSeries( ...
+                    'description', 'digital codes from failed decode attempt', ...
+                    'data', int16(recdev.board_dig_in_data(recdev.dio_map{mm}.map,:)), ...
+                    'data_unit', 'state', ...
+                    'starting_time_rate', recdev.sampling_rate ... % Hz
+                    );
+
+                digi_tracking = types.core.BehavioralTimeSeries();
+                digi_tracking.timeseries.set('digital_input_raw_data', digi_state);
+
+                nwb.acquisition.set('digital_input_raw', digi_tracking);
+
+            end
 
         end
 

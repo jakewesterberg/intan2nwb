@@ -23,8 +23,7 @@
 
 function intan2nwb(ID, varargin)
 %% Defaults - need to ammend
-keepers                         = {'NWB'};
-return_to_source                = false;
+keepers                         = {};
 skip_completed                  = false;
 this_ident                      = []; % used to specify specific session(s) with their ident
 
@@ -70,7 +69,7 @@ end
 
 n_procd = 0;
 %% Loop through sessions
-for ii = to_proc(3)
+for ii = to_proc(end) %17:end)
     
     % Skip files already processed if desired
     if exist([pp.DATA_DEST '_6_NWB_DATA' filesep recording_info.Identifier{ii} '.nwb'], 'file') & skip_completed

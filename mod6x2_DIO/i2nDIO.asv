@@ -1,4 +1,4 @@
-function nwb = i2nDIO(pp, nwb, recdev)
+function nwb = i2nDIO(nwb, recdev)
 
 for mm = 1 : numel(recdev.dio_map)
     if strcmp(recdev.dio_map{mm}.description, 'EVT')
@@ -12,7 +12,7 @@ for mm = 1 : numel(recdev.dio_map)
             % Strobe-bit-less digital events that were used for a short
             % period of time. They seem to produce some inaccurate values
             % on decode...
-            
+
             intan_code_times_unprocessed = find(sum(digital_ordered) > 0);
             intan_code_times = nan(length(intan_code_times_unprocessed),1);
             intan_code_values = nan(numel(recdev.dio_map{mm}.map),length(intan_code_times_unprocessed));
@@ -34,13 +34,22 @@ for mm = 1 : numel(recdev.dio_map)
             intan_code_times = intan_code_times(1:temp_ctr-1) ./ recdev.sampling_rate;
             intan_code_values = intan_code_values(:,1:temp_ctr-1);
             intan_code_values = bit2int(flip(intan_code_values),numel(recdev.dio_map{mm}.map))';
-            intan_code_times = intan_code_times / recdev.sampling_rate;
 
             temp_data = VANDERBILT_PassiveGLOv1(intan_code_values, intan_code_times);
             event_data = {};
             event_data{1} = temp_data; clear temp_data
 
         else
+
+            % Assumes strobe bit is first bit and checks to see if it was
+            % flipped
+            strobe_check_win = 60;
+            strobe_dir = ones(1, size(digital_ordered, 2));
+            strobe_local_sum = movsum(digital_ordered(1,:), recdev.sampling_rate*strobe_check_win); 
+            strobe_dir(strobe_local_sum > (0.5 * strobe_check_win * recdev.sampling_rate)) = 0;
+            strobe_dir(1:round(recdev.sampling_rate * 0.5 * strobe_check_win)) = strobe_dir(round(recdev.sampling_rate * 0.5 * strobe_check_win));
+            strobe_dir(end-round(recdev.sampling_rate * 0.5 * strobe_check_win):end) = strobe_dir(end-round(recdev.sampling_rate * 0.5 * strobe_check_win));
+            digital_ordered(1, ~strobe_dir) = ~digital_ordered(1, ~strobe_dir);
 
             digital_ordered = ...
                 bit2int(flip(digital_ordered), numel(recdev.dio_map{mm}.map))';
@@ -50,7 +59,20 @@ for mm = 1 : numel(recdev.dio_map)
             intan_code_values = digital_ordered(intan_code_times);
 
             intan_code_times = intan_code_times / recdev.sampling_rate;
-            event_data = identEvents(intan_code_values, intan_code_times);
+
+            try
+                event_data = identEvents(intan_code_values, intan_code_times);
+            catch
+                disp('!!!!!COULD NOT DECODE EVENTS. CREATING PLACEHOLDER WITH DATA IN NWB FILE!!!!!')
+                event_data{1}.task = 'UNDECODABLE_TASK';
+                event_data{1}.codes =
+                event_data{1}.start_time =
+                event_data{1}.stop_time =
+
+                task_data.codes(ii_ctr) = primary_codes(jj);
+                task_data.start_time(ii_ctr) = primary_times(jj);
+                task_data.stop_time(ii_ctr) = primary_times(jj);
+            end
 
         end
 

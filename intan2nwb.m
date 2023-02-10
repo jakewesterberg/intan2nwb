@@ -23,8 +23,8 @@
 
 function intan2nwb(ID, varargin)
 %% Defaults - need to ammend
-keepers                         = {'NWB'};
-skip_completed                  = false;
+keepers                         = {};
+skip_completed                  = true;
 this_ident                      = []; % used to specify specific session(s) with their ident
 
 %% pathing...can change to varargin or change function defaults for own machine
@@ -69,10 +69,11 @@ end
 
 n_procd = 0;
 %% Loop through sessions
-for ii = to_proc(17:end)
-    
+for ii = to_proc
+
     % Skip files already processed if desired
-    if exist([pp.DATA_DEST '_6_NWB_DATA' filesep recording_info.Identifier{ii} '.nwb'], 'file') & skip_completed
+    if (exist([pp.DATA_DEST '_6_NWB_DATA' filesep recording_info.Identifier{ii} '.nwb'], 'file') & skip_completed) | ...
+            recording_info.Preprocessor_Ignore_Flag(ii) == 1
         continue;
     end
 
@@ -174,7 +175,7 @@ for ii = to_proc(17:end)
 
             fprintf(fid, '%s\n', ...
                 ['robocopy ' ...
-                raw_data_temp
+                raw_data_temp ...
                 ' ' ...
                 [pp.RAW_DATA dir_name_temp] ...
                 ' /e /j /mt:' ...
