@@ -2,8 +2,6 @@ function nwb = i2nSPK(pp, nwb, recdev, probe)
 
 respike_sort = 0;
 
-reset(gpuDevice)
-
 %Setup kilosort dirs
 spk_file_path_itt = [pp.SPK_DATA nwb.identifier filesep 'probe-' ...
     num2str(probe.num) filesep]; % the raw data binary file is in this folder
@@ -14,163 +12,179 @@ end
 
 if ~exist([spk_file_path_itt filesep 'rez2.mat'], 'file') | respike_sort
 
-    ops.chanMap = [pp.REPO 'forked_toolboxes' filesep 'Kilosort-2.0' ...
-        filesep 'configFiles' filesep probe.type, '_kilosortChanMap.mat'];
-    run([pp.REPO 'forked_toolboxes' filesep 'Kilosort-2.0' ...
-        filesep 'configFiles' filesep probe.type '_config.m'])
+    spike_sorting_incomplete = 0;
+    itt_ctr = 0;
 
-    ops.trange      = [0 Inf]; % time range to sort
-    ops.NchanTOT    = probe.num_channels; % total number of channels in your recording
+    while spike_sorting_incomplete
+        itt_ctr = itt_ctr + 1;
 
-    ops.fig = 0;
-    ops.fs = recdev.sampling_rate;
+        if itt_ctr > 5
+            error('tried spike sort 5 times, no luck')
+        end
 
-    if ~exist(pp.SCRATCH, 'dir')
-        mkdir(pp.SCRATCH)
-    end
-    ops.fproc = fullfile(pp.SCRATCH, 'temp_wh.dat'); % proc file on a fast SSD
+        try
+            reset(gpuDevice)
 
-    % find the binary file
-    ops.fbinary = [pp.BIN_DATA nwb.identifier filesep nwb.identifier '_probe-' num2str(probe.num) '.bin'];
+            ops.chanMap = [pp.REPO 'forked_toolboxes' filesep 'Kilosort-2.0' ...
+                filesep 'configFiles' filesep probe.type, '_kilosortChanMap.mat'];
+            run([pp.REPO 'forked_toolboxes' filesep 'Kilosort-2.0' ...
+                filesep 'configFiles' filesep probe.type '_config.m'])
 
-    % preprocess data to create temp_wh.dat
-    rez = preprocessDataSub(ops);
+            ops.trange      = [0 Inf]; % time range to sort
+            ops.NchanTOT    = probe.num_channels; % total number of channels in your recording
 
-    % time-reordering as a function of drift
-    rez = clusterSingleBatches(rez);
+            ops.fig = 0;
+            ops.fs = recdev.sampling_rate;
 
-    % saving here is a good idea, because the rest can be resumed after loading rez
-    save(fullfile(spk_file_path_itt, 'rez.mat'), 'rez', '-v7.3', '-nocompression');
+            if ~exist(pp.SCRATCH, 'dir')
+                mkdir(pp.SCRATCH)
+            end
+            ops.fproc = fullfile(pp.SCRATCH, 'temp_wh.dat'); % proc file on a fast SSD
 
-    % main tracking and template matching algorithm
-    rez = learnAndSolve8b(rez);
+            % find the binary file
+            ops.fbinary = [pp.BIN_DATA nwb.identifier filesep nwb.identifier '_probe-' num2str(probe.num) '.bin'];
 
-    % final merges
-    rez = find_merges(rez, 1);
+            % preprocess data to create temp_wh.dat
+            rez = preprocessDataSub(ops);
 
-    % final splits by SVD
-    rez = splitAllClusters(rez, 1);
+            % time-reordering as a function of drift
+            rez = clusterSingleBatches(rez);
 
-    % final splits by amplitudes
-    rez = splitAllClusters(rez, 0);
+            % saving here is a good idea, because the rest can be resumed after loading rez
+            save(fullfile(spk_file_path_itt, 'rez.mat'), 'rez', '-v7.3', '-nocompression');
 
-    % decide on cutoff
-    rez = set_cutoff(rez);
+            % main tracking and template matching algorithm
+            rez = learnAndSolve8b(rez);
 
-    % write to Phy
-    fprintf('Saving results to Phy  \n')
-    rezToPhy(rez, spk_file_path_itt);
+            % final merges
+            rez = find_merges(rez, 1);
 
-    % discard features in final rez file (too slow to save)
-    rez.cProj = [];
-    rez.cProjPC = [];
+            % final splits by SVD
+            rez = splitAllClusters(rez, 1);
 
-    % final time sorting of spikes, for apps that use st3 directly
-    [~, isort]   = sortrows(rez.st3);
-    rez.st3      = rez.st3(isort, :);
+            % final splits by amplitudes
+            rez = splitAllClusters(rez, 0);
 
-    % Ensure all GPU arrays are transferred to CPU side before saving to .mat
-    rez_fields = fieldnames(rez);
-    for i = 1:numel(rez_fields)
-        field_name = rez_fields{i};
-        if(isa(rez.(field_name), 'gpuArray'))
-            rez.(field_name) = gather(rez.(field_name));
+            % decide on cutoff
+            rez = set_cutoff(rez);
+
+            % write to Phy
+            fprintf('Saving results to Phy  \n')
+            rezToPhy(rez, spk_file_path_itt);
+
+            % discard features in final rez file (too slow to save)
+            rez.cProj = [];
+            rez.cProjPC = [];
+
+            % final time sorting of spikes, for apps that use st3 directly
+            [~, isort]   = sortrows(rez.st3);
+            rez.st3      = rez.st3(isort, :);
+
+            % Ensure all GPU arrays are transferred to CPU side before saving to .mat
+            rez_fields = fieldnames(rez);
+            for i = 1:numel(rez_fields)
+                field_name = rez_fields{i};
+                if(isa(rez.(field_name), 'gpuArray'))
+                    rez.(field_name) = gather(rez.(field_name));
+                end
+            end
+
+            % save final results as rez2
+            fprintf('Saving final results in rez2  \n')
+            fname = fullfile(spk_file_path_itt, 'rez2.mat');
+            save(fname, 'rez', '-v7.3', '-nocompression');
+
+            reset(gpuDevice)
+
+            % create json
+            json_struct = struct();
+
+            json_struct.directories.kilosort_output_directory = ...
+                strrep(spk_file_path_itt, filesep, [filesep filesep]);
+
+            json_struct.waveform_metrics.waveform_metrics_file = ...
+                strrep([spk_file_path_itt 'waveform_metrics.csv'], filesep, [filesep filesep]);
+
+            json_struct.ephys_params.sample_rate = recdev.sampling_rate;
+            json_struct.ephys_params.bit_volts = 0.195;
+            json_struct.ephys_params.num_channels = numel(rez.ycoords);
+            json_struct.ephys_params.reference_channels = []; %probe.num_channels/2;
+            json_struct.ephys_params.vertical_site_spacing = mean(diff(rez.ycoords));
+            json_struct.ephys_params.ap_band_file = ...
+                strrep([pp.BIN_DATA nwb.identifier filesep nwb.identifier '_probe-' num2str(probe.num) '.bin'], filesep, [filesep filesep]);
+            json_struct.ephys_params.cluster_group_file_name = 'cluster_group.tsv.v2';
+            json_struct.ephys_params.reorder_lfp_channels = true;
+            json_struct.ephys_params.lfp_sample_rate = probe.downsample_fs;
+            json_struct.ephys_params.probe_type = probe.type;
+
+            json_struct.ks_postprocessing_params.within_unit_overlap_window = 0.000166;
+            json_struct.ks_postprocessing_params.between_unit_overlap_window = 0.000166;
+            json_struct.ks_postprocessing_params.between_unit_overlap_distance = 5;
+
+            json_struct.mean_waveform_params.mean_waveforms_file = ...
+                strrep([spk_file_path_itt 'mean_waveforms.npy'], filesep, [filesep filesep]);
+            json_struct.mean_waveform_params.samples_per_spike = 82;
+            json_struct.mean_waveform_params.pre_samples = 20;
+            json_struct.mean_waveform_params.num_epochs = 1;
+            json_struct.mean_waveform_params.spikes_per_epoch = 1000;
+            json_struct.mean_waveform_params.spread_threshold = 0.12;
+            json_struct.mean_waveform_params.site_range = 16;
+
+            json_struct.noise_waveform_params.classifier_path = ...
+                strrep([pp.REPO 'forked_toolboxes\ecephys_spike_sorting\modules\noise_templates\rf_classifier.pkl'], filesep, [filesep filesep]);
+            json_struct.noise_waveform_params.multiprocessing_worker_count = 10;
+
+            json_struct.quality_metrics_params.isi_threshold = 0.0015;
+            json_struct.quality_metrics_params.min_isi = 0.000166;
+            json_struct.quality_metrics_params.num_channels_to_compare = 7;
+            json_struct.quality_metrics_params.max_spikes_for_unit = 500;
+            json_struct.quality_metrics_params.max_spikes_for_nn = 10000;
+            json_struct.quality_metrics_params.n_neighbors = 4;
+            json_struct.quality_metrics_params.n_silhouette = 10000;
+            json_struct.quality_metrics_params.quality_metrics_output_file = ...
+                strrep([spk_file_path_itt 'metrics_test.csv'], filesep, [filesep filesep]);
+            json_struct.quality_metrics_params.drift_metrics_interval_s = 51;
+            json_struct.quality_metrics_params.drift_metrics_min_spikes_per_interval = 10;
+            json_struct.quality_metrics_params.include_pc_metrics = true;
+
+            encodedJSON = jsonencode(json_struct);
+
+            fid = fopen([spk_file_path_itt 'ecephys_spike_sorting_input.json'], 'w');
+            fprintf(fid, encodedJSON);
+            fclose('all');
+
+            clear encodedJSON json_struct
+
+            fid = fopen([spk_file_path_itt 'ecephys_spike_sorting_adapter.bat'], 'w');
+            fprintf(fid, '%s\n', '@echo OFF');
+            fprintf(fid, '%s\n', ['set CONDAPATH=' pp.CONDA]);
+            fprintf(fid, '%s\n', 'set ENVNAME=ecephys');
+            fprintf(fid, '%s\n', 'if %ENVNAME%==base (set ENVPATH=%CONDAPATH%) else (set ENVPATH=%CONDAPATH%\envs\%ENVNAME%)');
+            fprintf(fid, '%s\n', 'call %CONDAPATH%\Scripts\activate.bat %ENVPATH%');
+            fprintf(fid, '%s\n', 'set GIT_PYTHON_REFRESH=quiet');
+            fprintf(fid, '%s\n', 'set PYTHONIOENCODING=utf-8');
+            fprintf(fid, '%s\n', pp.REPO(1:2));
+            fprintf(fid, '%s\n', ['cd ' pp.REPO 'forked_toolboxes\ecephys_spike_sorting']);
+            fprintf(fid, '%s\n', ['python -m ecephys_spike_sorting.modules.kilosort_postprocessing --input_json ' ...
+                spk_file_path_itt 'ecephys_spike_sorting_input.json --output_json ' spk_file_path_itt 'ecephys_spike_sorting_kspp_output.json']);
+            fprintf(fid, '%s\n', ['python -m ecephys_spike_sorting.modules.mean_waveforms --input_json ' ...
+                spk_file_path_itt 'ecephys_spike_sorting_input.json --output_json ' spk_file_path_itt 'ecephys_spike_sorting_waveforms_output.json']);
+            fprintf(fid, '%s\n', ['python -m ecephys_spike_sorting.modules.noise_templates --input_json ' ...
+                spk_file_path_itt 'ecephys_spike_sorting_input.json --output_json ' spk_file_path_itt 'ecephys_spike_sorting_noise_output.json']);
+            fprintf(fid, '%s\n', ['python -m ecephys_spike_sorting.modules.quality_metrics --input_json '...
+                spk_file_path_itt 'ecephys_spike_sorting_input.json --output_json ' spk_file_path_itt 'ecephys_spike_sorting_quality_output.json']);
+            fprintf(fid, '%s\n', 'call conda deactivate');
+            fclose('all');
+
+            try
+                system([spk_file_path_itt 'ecephys_spike_sorting_adapter.bat']);
+            catch
+                warning('FAILED ECEPHYS TOOLBOX RUN.')
+            end
+            
+            spike_sorting_incomplete = 0;
         end
     end
-
-    % save final results as rez2
-    fprintf('Saving final results in rez2  \n')
-    fname = fullfile(spk_file_path_itt, 'rez2.mat');
-    save(fname, 'rez', '-v7.3', '-nocompression');
-
-    reset(gpuDevice)
-
-    % create json
-    json_struct = struct();
-
-    json_struct.directories.kilosort_output_directory = ...
-        strrep(spk_file_path_itt, filesep, [filesep filesep]);
-
-    json_struct.waveform_metrics.waveform_metrics_file = ...
-        strrep([spk_file_path_itt 'waveform_metrics.csv'], filesep, [filesep filesep]);
-
-    json_struct.ephys_params.sample_rate = recdev.sampling_rate;
-    json_struct.ephys_params.bit_volts = 0.195;
-    json_struct.ephys_params.num_channels = numel(rez.ycoords);
-    json_struct.ephys_params.reference_channels = []; %probe.num_channels/2;
-    json_struct.ephys_params.vertical_site_spacing = mean(diff(rez.ycoords));
-    json_struct.ephys_params.ap_band_file = ...
-        strrep([pp.BIN_DATA nwb.identifier filesep nwb.identifier '_probe-' num2str(probe.num) '.bin'], filesep, [filesep filesep]);
-    json_struct.ephys_params.cluster_group_file_name = 'cluster_group.tsv.v2';
-    json_struct.ephys_params.reorder_lfp_channels = true;
-    json_struct.ephys_params.lfp_sample_rate = probe.downsample_fs;
-    json_struct.ephys_params.probe_type = probe.type;
-
-    json_struct.ks_postprocessing_params.within_unit_overlap_window = 0.000166;
-    json_struct.ks_postprocessing_params.between_unit_overlap_window = 0.000166;
-    json_struct.ks_postprocessing_params.between_unit_overlap_distance = 5;
-
-    json_struct.mean_waveform_params.mean_waveforms_file = ...
-        strrep([spk_file_path_itt 'mean_waveforms.npy'], filesep, [filesep filesep]);
-    json_struct.mean_waveform_params.samples_per_spike = 82;
-    json_struct.mean_waveform_params.pre_samples = 20;
-    json_struct.mean_waveform_params.num_epochs = 1;
-    json_struct.mean_waveform_params.spikes_per_epoch = 1000;
-    json_struct.mean_waveform_params.spread_threshold = 0.12;
-    json_struct.mean_waveform_params.site_range = 16;
-
-    json_struct.noise_waveform_params.classifier_path = ...
-        strrep([pp.REPO 'forked_toolboxes\ecephys_spike_sorting\modules\noise_templates\rf_classifier.pkl'], filesep, [filesep filesep]);
-    json_struct.noise_waveform_params.multiprocessing_worker_count = 10;
-
-    json_struct.quality_metrics_params.isi_threshold = 0.0015;
-    json_struct.quality_metrics_params.min_isi = 0.000166;
-    json_struct.quality_metrics_params.num_channels_to_compare = 7;
-    json_struct.quality_metrics_params.max_spikes_for_unit = 500;
-    json_struct.quality_metrics_params.max_spikes_for_nn = 10000;
-    json_struct.quality_metrics_params.n_neighbors = 4;
-    json_struct.quality_metrics_params.n_silhouette = 10000;
-    json_struct.quality_metrics_params.quality_metrics_output_file = ...
-        strrep([spk_file_path_itt 'metrics_test.csv'], filesep, [filesep filesep]);
-    json_struct.quality_metrics_params.drift_metrics_interval_s = 51;
-    json_struct.quality_metrics_params.drift_metrics_min_spikes_per_interval = 10;
-    json_struct.quality_metrics_params.include_pc_metrics = true;
-
-    encodedJSON = jsonencode(json_struct);
-
-    fid = fopen([spk_file_path_itt 'ecephys_spike_sorting_input.json'], 'w');
-    fprintf(fid, encodedJSON);
-    fclose('all');
-
-    clear encodedJSON json_struct
-
-    fid = fopen([spk_file_path_itt 'ecephys_spike_sorting_adapter.bat'], 'w');
-    fprintf(fid, '%s\n', '@echo OFF');
-    fprintf(fid, '%s\n', ['set CONDAPATH=' pp.CONDA]);
-    fprintf(fid, '%s\n', 'set ENVNAME=ecephys');
-    fprintf(fid, '%s\n', 'if %ENVNAME%==base (set ENVPATH=%CONDAPATH%) else (set ENVPATH=%CONDAPATH%\envs\%ENVNAME%)');
-    fprintf(fid, '%s\n', 'call %CONDAPATH%\Scripts\activate.bat %ENVPATH%');
-    fprintf(fid, '%s\n', 'set GIT_PYTHON_REFRESH=quiet');
-    fprintf(fid, '%s\n', 'set PYTHONIOENCODING=utf-8');
-    fprintf(fid, '%s\n', pp.REPO(1:2));
-    fprintf(fid, '%s\n', ['cd ' pp.REPO 'forked_toolboxes\ecephys_spike_sorting']);
-    fprintf(fid, '%s\n', ['python -m ecephys_spike_sorting.modules.kilosort_postprocessing --input_json ' ...
-        spk_file_path_itt 'ecephys_spike_sorting_input.json --output_json ' spk_file_path_itt 'ecephys_spike_sorting_kspp_output.json']);
-    fprintf(fid, '%s\n', ['python -m ecephys_spike_sorting.modules.mean_waveforms --input_json ' ...
-        spk_file_path_itt 'ecephys_spike_sorting_input.json --output_json ' spk_file_path_itt 'ecephys_spike_sorting_waveforms_output.json']);
-    fprintf(fid, '%s\n', ['python -m ecephys_spike_sorting.modules.noise_templates --input_json ' ...
-        spk_file_path_itt 'ecephys_spike_sorting_input.json --output_json ' spk_file_path_itt 'ecephys_spike_sorting_noise_output.json']);
-    fprintf(fid, '%s\n', ['python -m ecephys_spike_sorting.modules.quality_metrics --input_json '...
-        spk_file_path_itt 'ecephys_spike_sorting_input.json --output_json ' spk_file_path_itt 'ecephys_spike_sorting_quality_output.json']);
-    fprintf(fid, '%s\n', 'call conda deactivate');
-    fclose('all');
-
-    try
-        system([spk_file_path_itt 'ecephys_spike_sorting_adapter.bat']);
-    catch
-        warning('FAILED ECEPHYS TOOLBOX RUN.')
-    end
-
 end
 
 if ~exist('rez', 'var')
@@ -384,8 +398,6 @@ end
 %% CONVOLUTION
 % done once all probes have been sorted...
 
-% NEED TO FIX THE CONVOLUTION ISSUE. CHECK AIC VERSION
-
 if probe.last_probe
 
     unit_idents = nwb.units.vectordata.get('local_index').data(:);
@@ -486,8 +498,6 @@ if probe.last_probe
     suac_series = types.core.ProcessingModule('convolved_spike_train_data', convolution_electrical_series, ...
         'description', 'Single units rasters convolved using EPSP kernel');
     nwb.processing.set('convolved_spike_train', suac_series);
-
-    nwbExport(nwb, [pp.NWB_DATA nwb.identifier '.nwb']);
 
 end
 end
